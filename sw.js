@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scanmaster-pwa-v1';
+const CACHE_NAME = 'scanmaster-pwa-v2'; // Bumped to v2 to force browsers to clear old broken caches
 const ASSETS_TO_CACHE = [
   './',
   './index.html', // Fixed casing: was previously Index.html which breaks on Github Pages
