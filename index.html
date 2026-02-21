@@ -373,7 +373,12 @@
               body: JSON.stringify({ action, payload }),
               redirect: 'follow'
             });
-            return await res.json();
+            const textData = await res.text();
+            if (textData.trim().startsWith('<')) {
+              console.warn("API Call Blocked: Deployed with wrong permissions.");
+              return null;
+            }
+            return JSON.parse(textData);
           } catch(e) {
             console.error('API Error:', e);
             return null;
@@ -384,9 +389,19 @@
           if (!gasUrl.value) return;
           isLoading.value = true;
           try {
-            const res = await fetch(gasUrl.value, { redirect: 'follow' });
-            if (!res.ok) throw new Error("Network response was not ok");
-            const data = await res.json();
+            const fetchUrl = gasUrl.value.trim();
+            const res = await fetch(fetchUrl, { method: 'GET', redirect: 'follow' });
+            
+            if (!res.ok) throw new Error("Network response was not ok (" + res.status + ")");
+            
+            const textData = await res.text();
+            
+            // Check if Google returned a Login page instead of our JSON database
+            if (textData.trim().startsWith('<')) {
+               throw new Error("Google blocked the connection. You MUST deploy the script with 'Who has access: Anyone' (Choose 'Anyone', NOT 'Anyone with a Google Account').");
+            }
+            
+            const data = JSON.parse(textData);
             
             classes.value = data.classes || [];
             students.value = data.students || [];
@@ -405,7 +420,8 @@
             }, 3000);
 
           } catch(e) {
-            alert("Error connecting to database. Please check if the URL is correct and deployed as 'Anyone'.");
+            console.error(e);
+            alert("Database Connection Error:\n\n" + e.message + "\n\nPlease correct your deployment settings in Google Apps Script or verify your URL.");
             disconnectDB();
           }
           isLoading.value = false;
