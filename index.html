@@ -52,7 +52,7 @@
 <body class="bg-slate-50 text-slate-800 font-sans h-screen">
   <div id="app" v-cloak class="flex h-full print:block">
     
-    <!-- Setup Screen (Shown if no Database URL is linked) -->
+    <!-- Setup Screen (Shown only if no Database URL is linked or hardcoded) -->
     <div v-if="!isConfigured" class="absolute inset-0 bg-slate-900 flex items-center justify-center z-50 text-white p-6">
        <div class="bg-slate-800 p-8 rounded-xl shadow-2xl max-w-lg w-full border border-slate-700">
           <div class="flex justify-center mb-6">
@@ -80,7 +80,8 @@
         <button @click="activeTab = 'analytics'" :class="['w-full text-left px-6 py-4 font-medium transition-colors border-l-4', activeTab === 'analytics' ? 'bg-blue-600 text-white border-blue-400' : 'hover:bg-slate-800 border-transparent']">Analytics</button>
       </nav>
       <div class="p-4 border-t border-slate-800">
-         <button @click="disconnectDB" class="text-xs text-red-400 hover:text-red-300 font-medium w-full text-left">Disconnect Database</button>
+         <button v-if="!isHardcoded" @click="disconnectDB" class="text-xs text-red-400 hover:text-red-300 font-medium w-full text-left">Disconnect Database</button>
+         <div v-else class="text-xs text-slate-500 text-center">Connected to Drive</div>
       </div>
     </div>
 
@@ -381,9 +382,16 @@
 
     createApp({
       setup() {
+        
+        // 👇 PASTE YOUR GOOGLE APPS SCRIPT URL HERE 👇
+        // Example: const HARDCODED_URL = "https://script.google.com/macros/s/AKfycby.../exec";
+        const HARDCODED_URL = ""; 
+        // 👆 ---------------------------------------- 👆
+
         const isConfigured = ref(false);
         const tempGasUrl = ref('');
-        const gasUrl = ref(localStorage.getItem('ScanMaster_DB_URL') || '');
+        const gasUrl = ref(HARDCODED_URL || localStorage.getItem('ScanMaster_DB_URL') || '');
+        const isHardcoded = computed(() => HARDCODED_URL.trim() !== "");
         
         const isLoading = ref(false);
         const activeTab = ref('classes');
@@ -728,6 +736,7 @@
         });
 
         return {
+          isHardcoded,
           isConfigured, tempGasUrl, saveConfig, disconnectDB,
           isLoading, activeTab, classes, students, quizzes,
           newClassName, selectedClass, addClass, deleteClass, currentStudents,
