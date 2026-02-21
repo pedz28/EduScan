@@ -398,7 +398,7 @@
             
             // Check if Google returned a Login page instead of our JSON database
             if (textData.trim().startsWith('<')) {
-               throw new Error("Google blocked the connection. You MUST deploy the script with 'Who has access: Anyone' (Choose 'Anyone', NOT 'Anyone with a Google Account').");
+               throw new Error("Google blocked the connection. You MUST deploy the script with 'Who has access: AnyoneAnyone with a Google Account'.");
             }
             
             const data = JSON.parse(textData);
@@ -702,3 +702,4 @@
   </script>
 </body>
 </html>
+
