@@ -1,7 +1,7 @@
 const CACHE_NAME = 'scanmaster-pwa-v1';
 const ASSETS_TO_CACHE = [
   './',
-  './Index.html',
+  './index.html', // Fixed capitalization error from 'Index.html'
   'https://unpkg.com/vue@3/dist/vue.global.prod.js',
   'https://cdn.tailwindcss.com',
   'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'
@@ -44,7 +44,7 @@ self.addEventListener('fetch', (event) => {
         return networkResponse;
       }).catch(() => {
         // If both cache and network fail (offline)
-        return new Response('Offline Mode Active', {
+        return new Response('Offline Mode Active - Connect to internet to sync', {
           status: 503,
           statusText: 'Service Unavailable'
         });
