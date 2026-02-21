@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="apple-touch-icon" href="https://api.iconify.design/lucide:camera.svg?color=%230f172a">
+  <link rel="manifest" href='data:application/manifest+json;utf-8,{"name":"ScanMaster","short_name":"ScanMaster","start_url":".","display":"standalone","background_color":"#f8fafc","theme_color":"#0f172a","icons":[{"src":"https://api.iconify.design/lucide:camera.svg","sizes":"192x192","type":"image/svg+xml"}]}'>
+  <!-- Load Vue 3, Tailwind, and JSQR -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  
+  <style>
+    [v-cloak] { display: none; }
+    
+    /* Dedicated Print CSS for perfectly sizing the QR cards to exactly half an A4 page */
+    @media print {
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      #print-area { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
+      
+      .qr-card {
+        width: 100%;
+        height: 148mm; /* Exactly half the height of A4 portrait */
+        page-break-inside: avoid;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-bottom: 2px dashed #94a3b8;
+        position: relative;
+        box-sizing: border-box;
+      }
+      .qr-card:nth-child(even) { page-break-after: always; border-bottom: none; }
+      
+      .qr-wrapper { position: relative; width: 300px; height: 300px; margin-top: 20px;}
+      .qr-image { width: 100%; height: 100%; image-rendering: pixelated; }
+      
+      .letter { position: absolute; font-size: 18pt; font-weight: bold; font-family: sans-serif; }
+      .letter-A { top: -35px; left: 50%; transform: translateX(-50%); }
+      .letter-B { right: -35px; top: 50%; transform: translateY(-50%) rotate(90deg); }
+      .letter-C { bottom: -35px; left: 50%; transform: translateX(-50%) rotate(180deg); }
+      .letter-D { left: -35px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen">
+  <div id="app" v-cloak class="flex h-full print:block">
+    
+    <!-- Sidebar -->
+    <div class="w-64 bg-slate-900 text-slate-300 flex-col shadow-xl z-10 hidden md:flex print:hidden">
+      <div class="p-6 text-white font-bold text-2xl tracking-wider flex items-center gap-2 border-b border-slate-800">
+        ScanMaster
+      </div>
+      <nav class="flex-1 py-4">
+        <button @click="activeTab = 'classes'" :class="['w-full text-left px-6 py-4 font-medium transition-colors border-l-4', activeTab === 'classes' ? 'bg-blue-600 text-white border-blue-400' : 'hover:bg-slate-800 border-transparent']">Sections & Students</button>
+        <button @click="activeTab = 'quizzes'" :class="['w-full text-left px-6 py-4 font-medium transition-colors border-l-4', activeTab === 'quizzes' ? 'bg-blue-600 text-white border-blue-400' : 'hover:bg-slate-800 border-transparent']">Quizzes & Keys</button>
+        <button @click="activeTab = 'scanner'" :class="['w-full text-left px-6 py-4 font-medium transition-colors border-l-4', activeTab === 'scanner' ? 'bg-blue-600 text-white border-blue-400' : 'hover:bg-slate-800 border-transparent']">Live Scanner</button>
+        <button @click="activeTab = 'analytics'" :class="['w-full text-left px-6 py-4 font-medium transition-colors border-l-4', activeTab === 'analytics' ? 'bg-blue-600 text-white border-blue-400' : 'hover:bg-slate-800 border-transparent']">Analytics</button>
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 overflow-auto p-8 relative print:p-0">
+      
+      <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center bg-slate-50 z-50 print:hidden">
+        <div class="animate-pulse text-lg font-bold text-slate-500">Connecting to Google Sheets...</div>
+      </div>
+
+      <!-- CLASSES TAB -->
+      <div v-show="activeTab === 'classes'" class="flex flex-col md:flex-row gap-6 h-full print:hidden">
+        <div class="w-full md:w-1/3 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h2 class="text-xl font-bold mb-4">Sections</h2>
+          <div class="flex gap-2 mb-6">
+            <input v-model="newClassName" @keyup.enter="addClass" type="text" placeholder="New Section Name" class="flex-1 border rounded px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+            <button @click="addClass" class="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700">+</button>
+          </div>
+          <ul class="space-y-2">
+            <li v-for="cls in classes" :key="cls.ClassID" @click="selectedClass = cls.ClassID" :class="['flex justify-between p-3 rounded cursor-pointer border', selectedClass === cls.ClassID ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50 border-transparent']">
+              <span>{{ cls.ClassName }}</span>
+              <button @click.stop="deleteClass(cls.ClassID)" class="text-red-400 hover:text-red-600">Del</button>
+            </li>
+          </ul>
+        </div>
+
+        <div class="w-full md:w-2/3 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col">
+          <div v-if="selectedClass">
+             <div class="flex justify-between items-center mb-6">
+               <h2 class="text-xl font-bold">Students</h2>
+               <button @click="printQRs" class="bg-slate-800 text-white px-4 py-2 rounded text-sm hover:bg-slate-700">Print QR Cards</button>
+             </div>
+             <div class="flex gap-2 mb-4">
+                <input v-model="newStudentName" @keyup.enter="addStudent" placeholder="Student Name" class="flex-1 border rounded p-2 outline-none focus:ring-2 focus:ring-blue-500">
+                <button @click="addStudent" class="bg-blue-600 text-white px-4 rounded font-bold hover:bg-blue-700">Add</button>
+             </div>
+             <div class="overflow-y-auto border rounded max-h-[50vh]">
+               <table class="w-full text-left text-sm">
+                 <thead class="bg-slate-100"><tr><th class="p-3">Roster #</th><th class="p-3">Name</th><th class="p-3">Action</th></tr></thead>
+                 <tbody>
+                   <tr v-for="stu in currentStudents" :key="stu.StudentID" class="border-b">
+                     <td class="p-3 font-bold text-slate-500">{{ stu.RosterNumber }}</td>
+                     <td class="p-3">{{ stu.StudentName }}</td>
+                     <td class="p-3"><button @click="deleteStudent(stu.StudentID)" class="text-red-400">Remove</button></td>
+                   </tr>
+                 </tbody>
+               </table>
+             </div>
+          </div>
+          <div v-else class="flex-1 flex items-center justify-center text-slate-400">Select a section</div>
+        </div>
+      </div>
+
+      <!-- QUIZZES TAB -->
+      <div v-show="activeTab === 'quizzes'" class="flex flex-col md:flex-row gap-6 h-full print:hidden">
+        <div class="w-full md:w-1/3 bg-white p-6 rounded-xl shadow border border-slate-200">
+          <h2 class="text-xl font-bold mb-4">Quizzes</h2>
+          <div class="flex gap-2 mb-6">
+            <input v-model="newQuizName" @keyup.enter="addQuiz" type="text" placeholder="Quiz Name" class="flex-1 border rounded px-3 outline-none focus:ring-2 focus:ring-blue-500">
+            <button @click="addQuiz" class="bg-blue-600 text-white px-4 py-2 rounded font-bold">+</button>
+          </div>
+          <ul class="space-y-2">
+            <li v-for="q in quizzes" :key="q.QuizID" @click="selectedQuiz = q.QuizID" :class="['flex justify-between p-3 rounded cursor-pointer border', selectedQuiz === q.QuizID ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50 border-transparent']">
+              <span>{{ q.QuizName }}</span>
+              <button @click.stop="deleteQuiz(q.QuizID)" class="text-red-400">Del</button>
+            </li>
+          </ul>
+        </div>
+
+        <div class="w-full md:w-2/3 bg-white p-6 rounded-xl shadow border flex flex-col">
+          <div v-if="selectedQuizData">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-xl font-bold">{{ selectedQuizData.QuizName }} - Answer Key</h2>
+              <button @click="addQuestion" class="bg-blue-100 text-blue-700 px-4 py-2 rounded text-sm font-bold">+ Question</button>
+            </div>
+            <div class="flex-1 overflow-y-auto space-y-3">
+              <div v-for="(q, idx) in selectedQuizData.Questions" :key="q.id" class="flex items-center gap-4 bg-slate-50 p-4 rounded border">
+                <span class="font-bold w-8">{{ idx + 1 }}.</span>
+                <input v-model="q.text" @change="saveQuizData" class="flex-1 border p-2 rounded" placeholder="Question desc...">
+                <select v-model="q.answer" @change="saveQuizData" class="border p-2 rounded font-bold text-blue-600 bg-white">
+                  <option>A</option><option>B</option><option>C</option><option>D</option>
+                </select>
+                <button @click="removeQuestion(idx)" class="text-red-400 font-bold">X</button>
+              </div>
+            </div>
+          </div>
+          <div v-else class="flex-1 flex items-center justify-center text-slate-400">Select a quiz to edit</div>
+        </div>
+      </div>
+
+      <!-- SCANNER TAB -->
+      <div v-show="activeTab === 'scanner'" class="h-full flex flex-col print:hidden">
+        <div v-if="!activeSessionId" class="max-w-xl mx-auto mt-10 bg-white p-8 rounded-xl shadow border">
+          <h2 class="text-2xl font-bold mb-6">Launch Scanner</h2>
+          
+          <div class="space-y-4">
+            <!-- BREAKOUT WARNING ONLY SHOWN ON CAMERA FAILURE -->
+            <div v-if="cameraBlocked" class="p-5 bg-amber-50 text-amber-900 border border-amber-300 rounded-lg shadow-sm mb-6">
+               <h3 class="font-bold text-lg text-amber-800 mb-2">📸 Camera Permission Denied</h3>
+               <p class="text-sm mb-4">Your browser blocked camera access. If you are viewing this in an embedded preview, you must pop the app out into a full window. If you are already deployed, please click the camera icon in your URL bar to allow access.</p>
+               <a :href="pageUrl" target="_blank" class="block w-full text-center bg-amber-500 text-white py-3 rounded font-bold hover:bg-amber-600 transition shadow-sm mb-2">
+                 Open in Full Window
+               </a>
+               <p class="text-xs text-amber-700 text-center">If the button above does not work, right-click it and select "Open link in new tab".</p>
+            </div>
+
+            <select v-model="scanClass" class="w-full border p-3 rounded outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">-- Choose Section --</option>
+              <option v-for="c in classes" :value="c.ClassID">{{ c.ClassName }}</option>
+            </select>
+            <select v-model="scanQuiz" class="w-full border p-3 rounded outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">-- Choose Quiz --</option>
+              <option v-for="q in quizzes" :value="q.QuizID">{{ q.QuizName }}</option>
+            </select>
+            <button @click="startSession" :disabled="!scanClass || !scanQuiz" class="w-full bg-blue-600 text-white py-4 rounded font-bold disabled:opacity-50 transition">Start Live Projection</button>
+          </div>
+        </div>
+
+        <div v-else class="flex flex-col lg:flex-row gap-6 h-full">
+          <!-- Camera Feed -->
+          <div class="w-full lg:w-1/2 bg-black rounded-xl overflow-hidden shadow relative flex flex-col">
+            <div class="bg-slate-900 text-white p-4 flex justify-between items-center z-10">
+              <button @click="qIndex = Math.max(0, qIndex-1)" class="bg-slate-700 px-4 py-2 rounded font-bold hover:bg-slate-600">Previous</button>
+              <div class="text-center">
+                <div class="font-bold">Question {{ qIndex + 1 }}</div>
+                <div class="text-sm text-slate-400">Key: <span class="text-green-400 text-lg font-bold">{{ activeQuestionKey }}</span></div>
+              </div>
+              <button @click="qIndex = Math.min(activeQuizData.Questions.length-1, qIndex+1)" class="bg-slate-700 px-4 py-2 rounded font-bold hover:bg-slate-600">Next</button>
+            </div>
+            
+            <div class="flex-1 relative bg-black flex items-center justify-center min-h-[400px]">
+               <video ref="video" class="absolute inset-0 w-full h-full object-cover opacity-0 z-0" playsinline muted></video>
+               <canvas ref="canvas" class="absolute inset-0 w-full h-full object-cover z-10"></canvas>
+            </div>
+
+            <div class="bg-slate-900 p-4 z-10 text-center">
+               <button @click="endSession" class="bg-red-600 text-white px-6 py-2 rounded font-bold hover:bg-red-700">Stop & Exit</button>
+            </div>
+          </div>
+
+          <!-- Live Projection Box -->
+          <div class="w-full lg:w-1/2 bg-white rounded-xl shadow border flex flex-col">
+            <div class="bg-slate-800 text-white p-4 font-bold flex justify-between">
+              <span>Live Projection</span>
+              <span class="text-sm text-slate-300">Question {{ qIndex + 1 }}</span>
+            </div>
+            <div class="flex-1 p-4 overflow-y-auto bg-slate-50 grid grid-cols-2 gap-3 content-start">
+               <div v-for="s in currentScanStudents" :key="s.StudentID" 
+                    :class="['p-3 rounded border flex justify-between items-center transition-colors',
+                      getStudentResult(s.StudentID) === null ? 'bg-white border-slate-200 text-slate-500' :
+                      getStudentResult(s.StudentID).isCorrect ? 'bg-green-100 border-green-500 text-green-800 font-bold' :
+                      'bg-red-100 border-red-500 text-red-800 font-bold'
+                    ]">
+                 <span>{{ s.RosterNumber }}. {{ s.StudentName.split(' ')[0] }}</span>
+                 <span v-if="getStudentResult(s.StudentID)" class="bg-white px-2 rounded border">{{ getStudentResult(s.StudentID).answer }}</span>
+               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS TAB -->
+      <div v-show="activeTab === 'analytics'" class="h-full flex flex-col print:hidden">
+        <div class="bg-white p-6 rounded-xl shadow border mb-6">
+          <h2 class="text-xl font-bold mb-4">Analytics</h2>
+          <select v-model="analyticsSession" class="w-full md:w-1/2 border p-3 rounded focus:ring-2 focus:ring-blue-500">
+             <option value="">-- Choose Completed Session --</option>
+             <option v-for="sess in uniqueSessions" :value="sess.SessionID">{{ sess.DateStr }} - {{ getClassName(sess.ClassID) }} - {{ getQuizName(sess.QuizID) }}</option>
+          </select>
+        </div>
+
+        <div v-if="analyticsStats" class="flex-1 overflow-y-auto space-y-6 pb-10">
+           <div class="grid grid-cols-3 gap-6">
+             <div class="bg-white p-6 rounded-xl border text-center">
+               <div class="text-slate-500">Mean Score</div>
+               <div class="text-4xl font-bold">{{ analyticsStats.mean }}</div>
+             </div>
+             <div class="bg-white p-6 rounded-xl border text-center">
+               <div class="text-slate-500">Standard Deviation</div>
+               <div class="text-4xl font-bold">{{ analyticsStats.sd }}</div>
+             </div>
+             <div class="bg-white p-6 rounded-xl border text-center">
+               <div class="text-slate-500">Participation</div>
+               <div class="text-4xl font-bold">{{ analyticsStats.scores.length }}</div>
+             </div>
+           </div>
+
+           <div class="bg-white p-6 rounded-xl border">
+             <h3 class="font-bold text-lg mb-4">Item Analysis</h3>
+             <table class="w-full text-left text-sm">
+               <thead class="bg-slate-100">
+                 <tr><th class="p-3">Q#</th><th class="p-3">Key</th><th class="p-3">Correct %</th><th class="p-3">A%</th><th class="p-3">B%</th><th class="p-3">C%</th><th class="p-3">D%</th></tr>
+               </thead>
+               <tbody>
+                 <tr v-for="(item, i) in analyticsStats.itemAnalysis" class="border-b">
+                   <td class="p-3 font-bold">{{ i + 1 }}</td>
+                   <td class="p-3 text-green-600 font-bold">{{ item.key }}</td>
+                   <td class="p-3 font-bold">{{ item.diff }}%</td>
+                   <td class="p-3 text-slate-500">{{ item.A }}%</td>
+                   <td class="p-3 text-slate-500">{{ item.B }}%</td>
+                   <td class="p-3 text-slate-500">{{ item.C }}%</td>
+                   <td class="p-3 text-slate-500">{{ item.D }}%</td>
+                 </tr>
+               </tbody>
+             </table>
+           </div>
+        </div>
+      </div>
+      
+    </div> <!-- End Main Content -->
+
+    <!-- Hidden Print Container -->
+    <div id="print-area" class="hidden">
+      <div v-for="s in currentStudents" :key="s.StudentID" class="qr-card">
+         <div class="absolute top-4 left-4 text-xs text-slate-500">Section: {{ getClassName(s.ClassID) }}</div>
+         <div class="qr-wrapper">
+           <span class="letter letter-A">A</span>
+           <span class="letter letter-B">B</span>
+           <span class="letter letter-C">C</span>
+           <span class="letter letter-D">D</span>
+           <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(s.StudentID) + '&margin=0'" class="qr-image"/>
+         </div>
+         <div class="absolute bottom-6 right-6 text-right">
+           <div class="font-bold text-3xl">#{{ s.RosterNumber }}</div>
+           <div class="text-xl font-medium mt-1">{{ s.StudentName }}</div>
+         </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const isLoading = ref(true);
+        const activeTab = ref('classes');
+        
+        // Data Arrays from GAS
+        const classes = ref([]);
+        const students = ref([]);
+        const quizzes = ref([]);
+        const results = ref([]); // historical scans
+        const localScans = ref([]); // un-synced queue
+        
+        // UI States
+        const newClassName = ref('');
+        const selectedClass = ref('');
+        const newStudentName = ref('');
+        const newQuizName = ref('');
+        const selectedQuiz = ref('');
+        const cameraBlocked = ref(false);
+        const pageUrl = ref(window.location.href);
+
+        // Helper to check for GAS environment
+        const isGAS = typeof google !== 'undefined' && google.script;
+
+        // Fetch Data
+        onMounted(() => {
+          if (isGAS) {
+            google.script.run.withSuccessHandler(data => {
+              classes.value = data.classes || [];
+              students.value = data.students || [];
+              quizzes.value = data.quizzes || [];
+              results.value = data.results || [];
+              isLoading.value = false;
+              
+              // Background sync loop for scans
+              setInterval(() => {
+                if (localScans.value.length > 0) {
+                   const batch = [...localScans.value];
+                   localScans.value = [];
+                   google.script.run.recordScans(batch); // Fire and forget
+                   results.value.push(...batch); // Optimistic local
+                }
+              }, 3000);
+
+            }).getInitialData();
+          } else {
+            // Mock Data for Canvas/Local Preview
+            console.warn("Running outside Google Apps Script. Mock data loaded.");
+            classes.value = [{ ClassID: 'c1', ClassName: 'Demo Section' }];
+            students.value = [{ StudentID: 's1', ClassID: 'c1', RosterNumber: 1, StudentName: 'John Doe' }];
+            quizzes.value = [{ QuizID: 'q1', QuizName: 'Demo Quiz', Questions: [{id: '1', text: 'Q1', answer: 'A'}] }];
+            isLoading.value = false;
+
+            setInterval(() => {
+              if (localScans.value.length > 0) {
+                 const batch = [...localScans.value];
+                 localScans.value = [];
+                 results.value.push(...batch);
+              }
+            }, 3000);
+          }
+        });
+
+        // --- CLASSES & STUDENTS ---
+        const addClass = () => {
+          if (!newClassName.value.trim()) return;
+          const id = crypto.randomUUID();
+          classes.value.push({ ClassID: id, ClassName: newClassName.value });
+          if (isGAS) google.script.run.modifyDB('addClass', { id, name: newClassName.value });
+          newClassName.value = '';
+        };
+        const deleteClass = (id) => {
+          classes.value = classes.value.filter(c => c.ClassID !== id);
+          students.value = students.value.filter(s => s.ClassID !== id);
+          if (selectedClass.value === id) selectedClass.value = '';
+          if (isGAS) google.script.run.modifyDB('deleteClass', { id });
+        };
+        const currentStudents = computed(() => {
+          return students.value.filter(s => s.ClassID === selectedClass.value).sort((a,b)=>a.RosterNumber - b.RosterNumber);
+        });
+        const addStudent = () => {
+          if (!newStudentName.value.trim() || !selectedClass.value) return;
+          const roster = currentStudents.value.length + 1;
+          const id = crypto.randomUUID();
+          students.value.push({ StudentID: id, ClassID: selectedClass.value, RosterNumber: roster, StudentName: newStudentName.value });
+          if (isGAS) google.script.run.modifyDB('addStudent', { id, classId: selectedClass.value, roster, name: newStudentName.value });
+          newStudentName.value = '';
+        };
+        const deleteStudent = (id) => {
+          students.value = students.value.filter(s => s.StudentID !== id);
+          if (isGAS) google.script.run.modifyDB('deleteStudent', { id });
+        };
+
+        const printQRs = () => { window.print(); };
+        const getClassName = (id) => classes.value.find(c => c.ClassID === id)?.ClassName || 'Unknown';
+        const getQuizName = (id) => quizzes.value.find(q => q.QuizID === id)?.QuizName || 'Unknown';
+
+        // --- QUIZZES ---
+        const addQuiz = () => {
+          if(!newQuizName.value.trim()) return;
+          const id = crypto.randomUUID();
+          quizzes.value.push({ QuizID: id, QuizName: newQuizName.value, Questions: [] });
+          if (isGAS) google.script.run.modifyDB('saveQuiz', { id, name: newQuizName.value, questions: [] });
+          newQuizName.value = '';
+        };
+        const deleteQuiz = (id) => {
+          quizzes.value = quizzes.value.filter(q => q.QuizID !== id);
+          if(selectedQuiz.value === id) selectedQuiz.value = '';
+          if (isGAS) google.script.run.modifyDB('deleteQuiz', { id });
+        };
+        const selectedQuizData = computed(() => quizzes.value.find(q => q.QuizID === selectedQuiz.value));
+        
+        const saveQuizData = () => {
+          if(selectedQuizData.value && isGAS) google.script.run.modifyDB('updateQuiz', { id: selectedQuizData.value.QuizID, name: selectedQuizData.value.QuizName, questions: selectedQuizData.value.Questions });
+        };
+        const addQuestion = () => {
+          if(!selectedQuizData.value) return;
+          selectedQuizData.value.Questions.push({ id: crypto.randomUUID(), text: `Q${selectedQuizData.value.Questions.length + 1}`, answer: 'A' });
+          saveQuizData();
+        };
+        const removeQuestion = (idx) => {
+          selectedQuizData.value.Questions.splice(idx, 1);
+          saveQuizData();
+        };
+
+        // --- SCANNER ---
+        const scanClass = ref('');
+        const scanQuiz = ref('');
+        const activeSessionId = ref('');
+        const qIndex = ref(0);
+        const video = ref(null);
+        const canvas = ref(null);
+        let stream = null;
+        let scanRaf = null;
+        const lastScanMap = {};
+
+        const activeQuizData = computed(() => quizzes.value.find(q => q.QuizID === scanQuiz.value));
+        const activeQuestionKey = computed(() => activeQuizData.value?.Questions[qIndex.value]?.answer);
+        const currentScanStudents = computed(() => students.value.filter(s => s.ClassID === scanClass.value).sort((a,b)=>a.RosterNumber - b.RosterNumber));
+        
+        const liveSessionResults = ref([]); // reactive UI updates for current session
+
+        const getStudentResult = (studentId) => {
+          const res = liveSessionResults.value.find(r => r.studentId === studentId && r.qNum === (qIndex.value+1));
+          return res || null;
+        };
+
+        const startSession = async () => {
+           activeSessionId.value = crypto.randomUUID();
+           qIndex.value = 0;
+           liveSessionResults.value = [];
+           cameraBlocked.value = false; // Reset blocking state
+           try {
+             // 1. Check if the API is supported at all
+             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+               throw new Error("Your browser does not support camera access or you are not on a secure (HTTPS) connection.");
+             }
+             
+             // 2. Try rear/environment camera first
+             try {
+               stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+             } catch (err) {
+               if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                 throw err; // Bubble up explicitly denied permissions immediately
+               }
+               // 3. Fallback to default camera if environment camera is missing (e.g. desktop/laptop)
+               console.warn("Environment camera not found, trying default camera...", err);
+               stream = await navigator.mediaDevices.getUserMedia({ video: true });
+             }
+
+             video.value.srcObject = stream;
+             video.value.setAttribute("playsinline", true); // Required for iOS Safari
+             await video.value.play();
+             scanRaf = requestAnimationFrame(tick);
+
+           } catch(e) { 
+             console.error("Camera Setup Failed:", e);
+             if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+               // Activate the breakout UI
+               cameraBlocked.value = true;
+             } else {
+               alert("Camera Error: " + e.message);
+             }
+             activeSessionId.value = ''; // Reset UI State
+           }
+        };
+
+        const endSession = () => {
+           if(stream) stream.getTracks().forEach(t => t.stop());
+           cancelAnimationFrame(scanRaf);
+           activeSessionId.value = '';
+        };
+
+        const tick = () => {
+           if (!video.value || !canvas.value || !activeSessionId.value) return;
+           if (video.value.readyState === video.value.HAVE_ENOUGH_DATA) {
+              const ctx = canvas.value.getContext('2d');
+              canvas.value.height = video.value.videoHeight;
+              canvas.value.width = video.value.videoWidth;
+              ctx.drawImage(video.value, 0, 0, canvas.value.width, canvas.value.height);
+              
+              const imgData = ctx.getImageData(0,0, canvas.value.width, canvas.value.height);
+              const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
+              
+              if(code) {
+                 // Draw Box
+                 ctx.beginPath();
+                 ctx.moveTo(code.location.topLeftCorner.x, code.location.topLeftCorner.y);
+                 ctx.lineTo(code.location.topRightCorner.x, code.location.topRightCorner.y);
+                 ctx.lineTo(code.location.bottomRightCorner.x, code.location.bottomRightCorner.y);
+                 ctx.lineTo(code.location.bottomLeftCorner.x, code.location.bottomLeftCorner.y);
+                 ctx.closePath();
+                 ctx.lineWidth = 4;
+                 ctx.strokeStyle = '#22c55e';
+                 ctx.stroke();
+
+                 const studentId = code.data;
+                 const now = Date.now();
+                 
+                 // Debounce 1.5s
+                 if (!lastScanMap[studentId] || now - lastScanMap[studentId] > 1500) {
+                    if (currentScanStudents.value.some(s => s.StudentID === studentId)) {
+                        const dx = code.location.topLeftCorner.x - code.location.bottomLeftCorner.x;
+                        const dy = code.location.topLeftCorner.y - code.location.bottomLeftCorner.y;
+                        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                        
+                        let ans = 'D';
+                        if (angle > -135 && angle <= -45) ans = 'A';
+                        else if (angle > -45 && angle <= 45) ans = 'B';
+                        else if (angle > 45 && angle <= 135) ans = 'C';
+
+                        const isCorrect = (ans === activeQuestionKey.value);
+                        
+                        const payload = {
+                           sessionId: activeSessionId.value, classId: scanClass.value, quizId: scanQuiz.value,
+                           studentId: studentId, qNum: qIndex.value + 1, answer: ans, isCorrect: isCorrect
+                        };
+
+                        // Remove old answer for this Q if rescanned
+                        liveSessionResults.value = liveSessionResults.value.filter(r => !(r.studentId === studentId && r.qNum === (qIndex.value+1)));
+                        
+                        // Update UI instantly
+                        liveSessionResults.value.push(payload);
+                        
+                        // Queue to send to Google Sheets safely
+                        localScans.value.push(payload);
+                        lastScanMap[studentId] = now;
+                    }
+                 }
+              }
+           }
+           if (activeSessionId.value) scanRaf = requestAnimationFrame(tick);
+        };
+
+        // --- ANALYTICS ---
+        const analyticsSession = ref('');
+        const uniqueSessions = computed(() => {
+           const map = {};
+           results.value.forEach(r => {
+             if(!map[r.SessionID]) {
+                map[r.SessionID] = { SessionID: r.SessionID, ClassID: r.ClassID, QuizID: r.QuizID, DateStr: new Date(r.Timestamp).toLocaleDateString() };
+             }
+           });
+           return Object.values(map);
+        });
+
+        const analyticsStats = computed(() => {
+           if(!analyticsSession.value) return null;
+           const sResults = results.value.filter(r => r.SessionID === analyticsSession.value);
+           if(sResults.length === 0) return null;
+           
+           const sessMeta = uniqueSessions.value.find(s => s.SessionID === analyticsSession.value);
+           const quizMeta = quizzes.value.find(q => q.QuizID === sessMeta.QuizID);
+           if(!quizMeta) return null;
+
+           const studentScores = {};
+           sResults.forEach(r => {
+             if(!studentScores[r.StudentID]) studentScores[r.StudentID] = 0;
+             if(r.IsCorrect) studentScores[r.StudentID]++;
+           });
+           
+           const scoresArr = Object.values(studentScores);
+           const mean = scoresArr.reduce((a,b)=>a+b, 0) / Math.max(scoresArr.length, 1);
+           const variance = scoresArr.reduce((a,b)=>a+Math.pow(b-mean, 2), 0) / Math.max(scoresArr.length, 1);
+
+           const itemAnalysis = quizMeta.Questions.map((q, i) => {
+              const qNum = i + 1;
+              const qAns = sResults.filter(r => r.QuestionNum === qNum);
+              const total = Math.max(qAns.length, 1);
+              const count = (ans) => qAns.filter(r => r.Answer === ans).length;
+              return {
+                 key: q.answer,
+                 diff: Math.round((qAns.filter(r=>r.IsCorrect).length / total) * 100),
+                 A: Math.round((count('A')/total)*100),
+                 B: Math.round((count('B')/total)*100),
+                 C: Math.round((count('C')/total)*100),
+                 D: Math.round((count('D')/total)*100),
+              };
+           });
+
+           return { mean: mean.toFixed(2), sd: Math.sqrt(variance).toFixed(2), scores: scoresArr, itemAnalysis };
+        });
+
+        return {
+          isLoading, activeTab, classes, students, quizzes,
+          newClassName, selectedClass, addClass, deleteClass, currentStudents,
+          newStudentName, addStudent, deleteStudent, getClassName, printQRs,
+          newQuizName, selectedQuiz, addQuiz, deleteQuiz, selectedQuizData, addQuestion, removeQuestion, saveQuizData,
+          scanClass, scanQuiz, activeSessionId, qIndex, startSession, endSession, activeQuizData, activeQuestionKey, currentScanStudents, getStudentResult,
+          video, canvas,
+          analyticsSession, uniqueSessions, getQuizName, analyticsStats,
+        cameraBlocked, pageUrl
+      };
+    }
+  }).mount('#app');
+  </script>
+  
+  <script>
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(() => {
+          console.log('PWA ServiceWorker registered successfully.');
+        }).catch(err => {
+          console.warn('PWA ServiceWorker registration failed. Note: Apps Script does not support sw.js natively. Host on a standard web host for full PWA installability.', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
