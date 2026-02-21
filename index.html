@@ -64,7 +64,7 @@
           <input v-model="authUser" type="text" placeholder="Username" class="w-full bg-slate-900 border border-slate-600 rounded px-4 py-3 mb-4 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
           <input v-model="authPass" type="password" placeholder="Password" class="w-full bg-slate-900 border border-slate-600 rounded px-4 py-3 mb-6 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" @keyup.enter="authenticate">
           
-          <div v-if="authError" class="text-red-400 text-sm mb-4 text-center font-medium">{{ authError }}</div>
+          <div v-if="authError" class="text-red-400 text-sm mb-4 text-center font-medium p-3 bg-red-900/30 rounded border border-red-800/50 whitespace-pre-wrap">{{ authError }}</div>
           
           <button @click="authenticate" :disabled="isLoading" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-500 transition shadow-lg mb-4 flex justify-center items-center">
              <span v-if="!isLoading">{{ authMode === 'login' ? 'Login' : 'Register' }}</span>
@@ -446,12 +446,13 @@
             const textData = await res.text();
             if (textData.trim().startsWith('<')) {
               console.warn("API Call Blocked: Deployed with wrong permissions.");
-              return { error: "Google blocked the connection. Deploy the script with 'Who has access: Anyone'." };
+              return { error: "Permission Error: Google blocked the connection.\n\nDeploy your Google Apps Script with exactly:\n- Execute as: Me\n- Who has access: Anyone" };
             }
             return JSON.parse(textData);
           } catch(e) {
             console.error('API Error:', e);
-            return { error: "Failed to connect to the database server." };
+            // Updated error message to explicitly guide users to the CORS / Apps Script deployment fix.
+            return { error: "Network Error: Could not connect to Google Server.\n\nMake sure your Google Apps Script is deployed with:\nWho has access: Anyone" };
           }
         };
 
@@ -808,4 +809,3 @@
   </script>
 </body>
 </html>
-
