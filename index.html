@@ -406,6 +406,7 @@
         const quizzes = ref([]);
         const results = ref([]); // historical scans
         const localScans = ref([]); // un-synced queue
+        let syncInterval = null; // Used to prevent duplicate background loops on multiple logins
         
         // Save Queues for Explicit Saving
         const classQueue = ref([]);
@@ -516,6 +517,12 @@
            studentQueue.value = [];
            quizQueue.value = [];
            unsavedKeysMap.value = {};
+           
+           // Stop background syncing safely
+           if (syncInterval) {
+               clearInterval(syncInterval);
+               syncInterval = null;
+           }
         };
 
         const loadDatabase = async () => {
@@ -533,8 +540,11 @@
             quizzes.value = data.quizzes || [];
             results.value = data.results || [];
             
+            // Clean up any old intervals before starting a new one (prevents duplicate loops from repeated logins)
+            if (syncInterval) clearInterval(syncInterval);
+            
             // Start background sync loop for live scans
-            setInterval(async () => {
+            syncInterval = setInterval(async () => {
               if (localScans.value.length > 0) {
                  const batch = [...localScans.value];
                  localScans.value = [];
