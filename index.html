@@ -52,24 +52,33 @@
 <body class="bg-slate-50 text-slate-800 font-sans h-screen">
   <div id="app" v-cloak class="flex h-full print:block">
     
-    <!-- Setup Screen (Shown only if no Database URL is linked or hardcoded) -->
-    <div v-if="!isConfigured" class="absolute inset-0 bg-slate-900 flex items-center justify-center z-50 text-white p-6">
-       <div class="bg-slate-800 p-8 rounded-xl shadow-2xl max-w-lg w-full border border-slate-700">
+    <!-- Login/Register Screen (Main Entry Point) -->
+    <div v-if="!isLoggedIn" class="absolute inset-0 bg-slate-900 flex items-center justify-center z-50 text-white p-6">
+       <div class="bg-slate-800 p-8 rounded-xl shadow-2xl max-w-sm w-full border border-slate-700">
           <div class="flex justify-center mb-6">
             <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-3xl shadow-lg shadow-blue-500/50">📸</div>
           </div>
-          <h1 class="text-3xl font-bold text-center mb-2">Welcome to ScanMaster</h1>
-          <p class="text-slate-400 text-center mb-8">To begin, securely link this app to your Google Drive by pasting your Google Apps Script Web App URL below.</p>
+          <h1 class="text-2xl font-bold text-center mb-2">Welcome to ScanMaster</h1>
+          <p class="text-slate-400 text-center mb-6 text-sm">{{ authMode === 'login' ? 'Login to your account' : 'Create a new account' }}</p>
           
-          <label class="block text-sm font-bold text-slate-300 mb-2">Database Connection URL</label>
-          <input v-model="tempGasUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-900 border border-slate-600 rounded px-4 py-3 mb-6 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+          <input v-model="authUser" type="text" placeholder="Username" class="w-full bg-slate-900 border border-slate-600 rounded px-4 py-3 mb-4 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+          <input v-model="authPass" type="password" placeholder="Password" class="w-full bg-slate-900 border border-slate-600 rounded px-4 py-3 mb-6 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" @keyup.enter="authenticate">
           
-          <button @click="saveConfig" :disabled="!tempGasUrl" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-500 disabled:opacity-50 transition shadow-lg">Connect Database</button>
+          <div v-if="authError" class="text-red-400 text-sm mb-4 text-center font-medium">{{ authError }}</div>
+          
+          <button @click="authenticate" :disabled="isLoading" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-500 transition shadow-lg mb-4 flex justify-center items-center">
+             <span v-if="!isLoading">{{ authMode === 'login' ? 'Login' : 'Register' }}</span>
+             <span v-else class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+          </button>
+          
+          <div class="text-center text-sm text-slate-400 cursor-pointer hover:text-white transition" @click="toggleAuthMode">
+             {{ authMode === 'login' ? "Don't have an account? Register" : 'Already have an account? Login' }}
+          </div>
        </div>
     </div>
 
     <!-- Sidebar -->
-    <div v-if="isConfigured" class="w-64 bg-slate-900 text-slate-300 flex-col shadow-xl z-10 hidden md:flex print:hidden">
+    <div v-if="isLoggedIn" class="w-64 bg-slate-900 text-slate-300 flex-col shadow-xl z-10 hidden md:flex print:hidden">
       <div class="p-6 text-white font-bold text-2xl tracking-wider flex items-center gap-2 border-b border-slate-800">
         ScanMaster
       </div>
@@ -80,29 +89,32 @@
         <button @click="activeTab = 'analytics'" :class="['w-full text-left px-6 py-4 font-medium transition-colors border-l-4', activeTab === 'analytics' ? 'bg-blue-600 text-white border-blue-400' : 'hover:bg-slate-800 border-transparent']">Analytics</button>
       </nav>
       <div class="p-4 border-t border-slate-800">
-         <button v-if="!isHardcoded" @click="disconnectDB" class="text-xs text-red-400 hover:text-red-300 font-medium w-full text-left">Disconnect Database</button>
-         <div v-else class="text-xs text-slate-500 text-center">Connected to Drive</div>
+         <div class="text-sm font-bold text-white mb-2 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500"></span> {{ authUser }}</div>
+         <button @click="logout" class="text-xs text-slate-400 hover:text-white font-medium w-full text-left transition">Sign Out</button>
       </div>
     </div>
 
     <!-- Mobile Topbar -->
-    <div v-if="isConfigured" class="md:hidden fixed top-0 left-0 right-0 bg-slate-900 text-white p-4 flex justify-between items-center z-20 print:hidden shadow-md">
+    <div v-if="isLoggedIn" class="md:hidden fixed top-0 left-0 right-0 bg-slate-900 text-white p-4 flex justify-between items-center z-20 print:hidden shadow-md">
       <div class="font-bold text-lg">ScanMaster</div>
-      <select v-model="activeTab" class="bg-slate-800 border-none outline-none text-sm p-2 rounded text-white">
-        <option value="classes">Sections</option>
-        <option value="quizzes">Quizzes</option>
-        <option value="scanner">Scanner</option>
-        <option value="analytics">Analytics</option>
-      </select>
+      <div class="flex items-center gap-3">
+        <select v-model="activeTab" class="bg-slate-800 border-none outline-none text-sm p-2 rounded text-white">
+          <option value="classes">Sections</option>
+          <option value="quizzes">Quizzes</option>
+          <option value="scanner">Scanner</option>
+          <option value="analytics">Analytics</option>
+        </select>
+        <button @click="logout" class="text-xl">🚪</button>
+      </div>
     </div>
 
     <!-- Main Content -->
-    <div v-if="isConfigured" class="flex-1 overflow-auto p-4 md:p-8 pt-20 md:pt-8 relative print:p-0">
+    <div v-if="isLoggedIn" class="flex-1 overflow-auto p-4 md:p-8 pt-20 md:pt-8 relative print:p-0">
       
-      <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center bg-slate-50 z-50 print:hidden">
-        <div class="flex flex-col items-center gap-4">
+      <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center bg-slate-50/80 z-50 print:hidden backdrop-blur-sm">
+        <div class="flex flex-col items-center gap-4 bg-white p-6 rounded-xl shadow-lg border">
            <div class="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-           <div class="font-bold text-slate-500">Syncing with Google Sheets...</div>
+           <div class="font-bold text-slate-600">Syncing Cloud Database...</div>
         </div>
       </div>
 
@@ -385,14 +397,18 @@
         
         // 👇 PASTE YOUR GOOGLE APPS SCRIPT URL HERE 👇
         // Example: const HARDCODED_URL = "https://script.google.com/macros/s/AKfycby.../exec";
-        const HARDCODED_URL = ""; 
+        const HARDCODED_URL = "https://script.google.com/macros/s/AKfycbyqNakxad-wAgL4L81qQzDDRg6C2DW9nCZ2p8aFCvi2TulE6q5Uj5JSuNGuW_6jknjxjw/exec"; 
         // 👆 ---------------------------------------- 👆
 
-        const isConfigured = ref(false);
-        const tempGasUrl = ref('');
-        const gasUrl = ref(HARDCODED_URL || localStorage.getItem('ScanMaster_DB_URL') || '');
-        const isHardcoded = computed(() => HARDCODED_URL.trim() !== "");
+        // Core App & Auth State
+        const gasUrl = ref(HARDCODED_URL);
         
+        const isLoggedIn = ref(false);
+        const authMode = ref('login'); // 'login' or 'register'
+        const authUser = ref(localStorage.getItem('ScanMaster_User') || '');
+        const authPass = ref(localStorage.getItem('ScanMaster_Pass') || '');
+        const authError = ref('');
+
         const isLoading = ref(false);
         const activeTab = ref('classes');
         
@@ -412,50 +428,88 @@
         const cameraBlocked = ref(false);
 
         // API Helper for Fetching
+        // Now securely sends User Credentials via POST on every single database request
         const apiCall = async (action, payload = null) => {
           if (!gasUrl.value) return null;
           try {
             const res = await fetch(gasUrl.value, {
               method: 'POST',
               headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify({ action, payload }),
+              body: JSON.stringify({ 
+                 action, 
+                 username: authUser.value,
+                 password: authPass.value,
+                 payload 
+              }),
               redirect: 'follow'
             });
             const textData = await res.text();
             if (textData.trim().startsWith('<')) {
               console.warn("API Call Blocked: Deployed with wrong permissions.");
-              return null;
+              return { error: "Google blocked the connection. Deploy the script with 'Who has access: Anyone'." };
             }
             return JSON.parse(textData);
           } catch(e) {
             console.error('API Error:', e);
-            return null;
+            return { error: "Failed to connect to the database server." };
           }
         };
 
+        const authenticate = async () => {
+           if (!gasUrl.value || gasUrl.value === "") {
+              authError.value = "System Error: The developer has not set the Database URL in the code.";
+              return;
+           }
+           if (!authUser.value || !authPass.value) {
+              authError.value = "Username and password required.";
+              return;
+           }
+           authError.value = "";
+           isLoading.value = true;
+           
+           const res = await apiCall('authenticate', { mode: authMode.value });
+           
+           if (res && res.status === 'success') {
+              isLoggedIn.value = true;
+              localStorage.setItem('ScanMaster_User', authUser.value);
+              localStorage.setItem('ScanMaster_Pass', authPass.value);
+              loadDatabase(); // Pull data for just this user
+           } else {
+              authError.value = res?.error || "Authentication failed.";
+              isLoading.value = false;
+           }
+        };
+
+        const logout = () => {
+           isLoggedIn.value = false;
+           localStorage.removeItem('ScanMaster_User');
+           localStorage.removeItem('ScanMaster_Pass');
+           authPass.value = '';
+           classes.value = [];
+           students.value = [];
+           quizzes.value = [];
+           results.value = [];
+        };
+
+        const toggleAuthMode = () => {
+           authMode.value = authMode.value === 'login' ? 'register' : 'login';
+           authError.value = '';
+        };
+
         const loadDatabase = async () => {
-          if (!gasUrl.value) return;
+          if (!gasUrl.value || !isLoggedIn.value) return;
           isLoading.value = true;
           try {
-            const fetchUrl = gasUrl.value.trim();
-            const res = await fetch(fetchUrl, { method: 'GET', redirect: 'follow' });
+            // Securely POSTs for data belonging ONLY to this user
+            const data = await apiCall('getData');
             
-            if (!res.ok) throw new Error("Network response was not ok (" + res.status + ")");
-            
-            const textData = await res.text();
-            
-            // Check if Google returned a Login page instead of our JSON database
-            if (textData.trim().startsWith('<')) {
-               throw new Error("Google blocked the connection. You MUST deploy the script with 'Who has access: Anyone' (Choose 'Anyone', NOT 'Anyone with a Google Account').");
-            }
-            
-            const data = JSON.parse(textData);
+            if (data && data.error) throw new Error(data.error);
+            if (!data) throw new Error("Failed to load data.");
             
             classes.value = data.classes || [];
             students.value = data.students || [];
             quizzes.value = data.quizzes || [];
             results.value = data.results || [];
-            isConfigured.value = true;
             
             // Start background sync loop for offline-first capabilities
             setInterval(async () => {
@@ -469,28 +523,18 @@
 
           } catch(e) {
             console.error(e);
-            alert("Database Connection Error:\n\n" + e.message + "\n\nPlease correct your deployment settings in Google Apps Script or verify your URL.");
-            disconnectDB();
+            alert("Database Sync Error:\n\n" + e.message);
+            logout(); // Kick to login screen on hard fail
           }
           isLoading.value = false;
         };
 
         onMounted(() => {
-          if (gasUrl.value) loadDatabase();
+          if (gasUrl.value && authUser.value && authPass.value) {
+             // Attempt auto-login
+             authenticate();
+          }
         });
-
-        const saveConfig = () => {
-          localStorage.setItem('ScanMaster_DB_URL', tempGasUrl.value);
-          gasUrl.value = tempGasUrl.value;
-          loadDatabase();
-        };
-
-        const disconnectDB = () => {
-          localStorage.removeItem('ScanMaster_DB_URL');
-          gasUrl.value = '';
-          tempGasUrl.value = '';
-          isConfigured.value = false;
-        };
 
         // --- CLASSES & STUDENTS ---
         const addClass = () => {
@@ -736,8 +780,7 @@
         });
 
         return {
-          isHardcoded,
-          isConfigured, tempGasUrl, saveConfig, disconnectDB,
+          gasUrl, isLoggedIn, authMode, authUser, authPass, authError, authenticate, toggleAuthMode, logout,
           isLoading, activeTab, classes, students, quizzes,
           newClassName, selectedClass, addClass, deleteClass, currentStudents,
           newStudentName, addStudent, deleteStudent, getClassName, printQRs,
@@ -765,6 +808,3 @@
   </script>
 </body>
 </html>
-
-
-
