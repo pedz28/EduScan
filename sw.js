@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scanmaster-pwa-v3'; // Bumped to v3 to force browsers to clear old broken caches!
+const CACHE_NAME = 'scanmaster-pwa-v4'; // Bumped to v4 to clear persistent invalid URL caches!
 const ASSETS_TO_CACHE = [
   './',
   './index.html', // Fixed casing: was previously Index.html which breaks on Github Pages
@@ -33,6 +33,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Only cache GET requests
   if (event.request.method !== 'GET') return;
+  
+  // STRICT RULE: Never cache calls to the Google Apps Script backend database
+  if (event.request.url.includes('script.google.com')) return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
