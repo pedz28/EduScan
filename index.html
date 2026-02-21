@@ -48,8 +48,24 @@
 <body class="bg-slate-50 text-slate-800 font-sans h-screen">
   <div id="app" v-cloak class="flex h-full print:block">
     
+    <!-- Setup Screen (Shown if no Database URL is linked) -->
+    <div v-if="!isConfigured" class="absolute inset-0 bg-slate-900 flex items-center justify-center z-50 text-white p-6">
+       <div class="bg-slate-800 p-8 rounded-xl shadow-2xl max-w-lg w-full border border-slate-700">
+          <div class="flex justify-center mb-6">
+            <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-3xl shadow-lg shadow-blue-500/50">📸</div>
+          </div>
+          <h1 class="text-3xl font-bold text-center mb-2">Welcome to ScanMaster</h1>
+          <p class="text-slate-400 text-center mb-8">To begin, securely link this app to your Google Drive by pasting your Google Apps Script Web App URL below.</p>
+          
+          <label class="block text-sm font-bold text-slate-300 mb-2">Database Connection URL</label>
+          <input v-model="tempGasUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-900 border border-slate-600 rounded px-4 py-3 mb-6 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
+          
+          <button @click="saveConfig" :disabled="!tempGasUrl" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-500 disabled:opacity-50 transition shadow-lg">Connect Database</button>
+       </div>
+    </div>
+
     <!-- Sidebar -->
-    <div class="w-64 bg-slate-900 text-slate-300 flex-col shadow-xl z-10 hidden md:flex print:hidden">
+    <div v-if="isConfigured" class="w-64 bg-slate-900 text-slate-300 flex-col shadow-xl z-10 hidden md:flex print:hidden">
       <div class="p-6 text-white font-bold text-2xl tracking-wider flex items-center gap-2 border-b border-slate-800">
         ScanMaster
       </div>
@@ -59,13 +75,30 @@
         <button @click="activeTab = 'scanner'" :class="['w-full text-left px-6 py-4 font-medium transition-colors border-l-4', activeTab === 'scanner' ? 'bg-blue-600 text-white border-blue-400' : 'hover:bg-slate-800 border-transparent']">Live Scanner</button>
         <button @click="activeTab = 'analytics'" :class="['w-full text-left px-6 py-4 font-medium transition-colors border-l-4', activeTab === 'analytics' ? 'bg-blue-600 text-white border-blue-400' : 'hover:bg-slate-800 border-transparent']">Analytics</button>
       </nav>
+      <div class="p-4 border-t border-slate-800">
+         <button @click="disconnectDB" class="text-xs text-red-400 hover:text-red-300 font-medium">Disconnect Database</button>
+      </div>
+    </div>
+
+    <!-- Mobile Topbar -->
+    <div v-if="isConfigured" class="md:hidden fixed top-0 left-0 right-0 bg-slate-900 text-white p-4 flex justify-between items-center z-20 print:hidden">
+      <div class="font-bold text-lg">ScanMaster</div>
+      <select v-model="activeTab" class="bg-slate-800 border-none outline-none text-sm p-2 rounded">
+        <option value="classes">Sections</option>
+        <option value="quizzes">Quizzes</option>
+        <option value="scanner">Scanner</option>
+        <option value="analytics">Analytics</option>
+      </select>
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 overflow-auto p-8 relative print:p-0">
+    <div v-if="isConfigured" class="flex-1 overflow-auto p-4 md:p-8 pt-20 md:pt-8 relative print:p-0">
       
       <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center bg-slate-50 z-50 print:hidden">
-        <div class="animate-pulse text-lg font-bold text-slate-500">Connecting to Google Sheets...</div>
+        <div class="flex flex-col items-center gap-4">
+           <div class="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+           <div class="font-bold text-slate-500">Syncing with Google Sheets...</div>
+        </div>
       </div>
 
       <!-- CLASSES TAB -->
@@ -77,7 +110,7 @@
             <button @click="addClass" class="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700">+</button>
           </div>
           <ul class="space-y-2">
-            <li v-for="cls in classes" :key="cls.ClassID" @click="selectedClass = cls.ClassID" :class="['flex justify-between p-3 rounded cursor-pointer border', selectedClass === cls.ClassID ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50 border-transparent']">
+            <li v-for="cls in classes" :key="cls.ClassID" @click="selectedClass = cls.ClassID" :class="['flex justify-between p-3 rounded cursor-pointer border transition', selectedClass === cls.ClassID ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50 border-transparent']">
               <span>{{ cls.ClassName }}</span>
               <button @click.stop="deleteClass(cls.ClassID)" class="text-red-400 hover:text-red-600">Del</button>
             </li>
@@ -86,9 +119,9 @@
 
         <div class="w-full md:w-2/3 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col">
           <div v-if="selectedClass">
-             <div class="flex justify-between items-center mb-6">
+             <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
                <h2 class="text-xl font-bold">Students</h2>
-               <button @click="printQRs" class="bg-slate-800 text-white px-4 py-2 rounded text-sm hover:bg-slate-700">Print QR Cards</button>
+               <button @click="printQRs" class="bg-slate-800 text-white px-4 py-2 rounded text-sm hover:bg-slate-700 shadow">Print QR Cards</button>
              </div>
              <div class="flex gap-2 mb-4">
                 <input v-model="newStudentName" @keyup.enter="addStudent" placeholder="Student Name" class="flex-1 border rounded p-2 outline-none focus:ring-2 focus:ring-blue-500">
@@ -96,18 +129,18 @@
              </div>
              <div class="overflow-y-auto border rounded max-h-[50vh]">
                <table class="w-full text-left text-sm">
-                 <thead class="bg-slate-100"><tr><th class="p-3">Roster #</th><th class="p-3">Name</th><th class="p-3">Action</th></tr></thead>
+                 <thead class="bg-slate-100"><tr><th class="p-3 w-16">Roster #</th><th class="p-3">Name</th><th class="p-3 w-20">Action</th></tr></thead>
                  <tbody>
                    <tr v-for="stu in currentStudents" :key="stu.StudentID" class="border-b">
-                     <td class="p-3 font-bold text-slate-500">{{ stu.RosterNumber }}</td>
+                     <td class="p-3 font-bold text-slate-500 text-center">{{ stu.RosterNumber }}</td>
                      <td class="p-3">{{ stu.StudentName }}</td>
-                     <td class="p-3"><button @click="deleteStudent(stu.StudentID)" class="text-red-400">Remove</button></td>
+                     <td class="p-3"><button @click="deleteStudent(stu.StudentID)" class="text-red-400 hover:underline">Remove</button></td>
                    </tr>
                  </tbody>
                </table>
              </div>
           </div>
-          <div v-else class="flex-1 flex items-center justify-center text-slate-400">Select a section</div>
+          <div v-else class="flex-1 flex items-center justify-center text-slate-400">Select a section to manage students</div>
         </div>
       </div>
 
@@ -117,12 +150,12 @@
           <h2 class="text-xl font-bold mb-4">Quizzes</h2>
           <div class="flex gap-2 mb-6">
             <input v-model="newQuizName" @keyup.enter="addQuiz" type="text" placeholder="Quiz Name" class="flex-1 border rounded px-3 outline-none focus:ring-2 focus:ring-blue-500">
-            <button @click="addQuiz" class="bg-blue-600 text-white px-4 py-2 rounded font-bold">+</button>
+            <button @click="addQuiz" class="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700">+</button>
           </div>
           <ul class="space-y-2">
-            <li v-for="q in quizzes" :key="q.QuizID" @click="selectedQuiz = q.QuizID" :class="['flex justify-between p-3 rounded cursor-pointer border', selectedQuiz === q.QuizID ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50 border-transparent']">
+            <li v-for="q in quizzes" :key="q.QuizID" @click="selectedQuiz = q.QuizID" :class="['flex justify-between p-3 rounded cursor-pointer border transition', selectedQuiz === q.QuizID ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50 border-transparent']">
               <span>{{ q.QuizName }}</span>
-              <button @click.stop="deleteQuiz(q.QuizID)" class="text-red-400">Del</button>
+              <button @click.stop="deleteQuiz(q.QuizID)" class="text-red-400 hover:text-red-600">Del</button>
             </li>
           </ul>
         </div>
@@ -131,20 +164,21 @@
           <div v-if="selectedQuizData">
             <div class="flex justify-between items-center mb-6">
               <h2 class="text-xl font-bold">{{ selectedQuizData.QuizName }} - Answer Key</h2>
-              <button @click="addQuestion" class="bg-blue-100 text-blue-700 px-4 py-2 rounded text-sm font-bold">+ Question</button>
+              <button @click="addQuestion" class="bg-blue-100 text-blue-700 px-4 py-2 rounded text-sm font-bold hover:bg-blue-200 transition">+ Question</button>
             </div>
             <div class="flex-1 overflow-y-auto space-y-3">
               <div v-for="(q, idx) in selectedQuizData.Questions" :key="q.id" class="flex items-center gap-4 bg-slate-50 p-4 rounded border">
-                <span class="font-bold w-8">{{ idx + 1 }}.</span>
-                <input v-model="q.text" @change="saveQuizData" class="flex-1 border p-2 rounded" placeholder="Question desc...">
-                <select v-model="q.answer" @change="saveQuizData" class="border p-2 rounded font-bold text-blue-600 bg-white">
+                <span class="font-bold w-8 text-slate-400">{{ idx + 1 }}.</span>
+                <input v-model="q.text" @change="saveQuizData" class="flex-1 border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400" placeholder="Optional descriptor...">
+                <select v-model="q.answer" @change="saveQuizData" class="border p-2 rounded font-bold text-blue-600 bg-white outline-none focus:ring-2 focus:ring-blue-400">
                   <option>A</option><option>B</option><option>C</option><option>D</option>
                 </select>
-                <button @click="removeQuestion(idx)" class="text-red-400 font-bold">X</button>
+                <button @click="removeQuestion(idx)" class="text-red-400 font-bold hover:text-red-600 px-2">X</button>
               </div>
+              <div v-if="selectedQuizData.Questions.length === 0" class="text-center text-slate-400 mt-10">Add questions to build your answer key.</div>
             </div>
           </div>
-          <div v-else class="flex-1 flex items-center justify-center text-slate-400">Select a quiz to edit</div>
+          <div v-else class="flex-1 flex items-center justify-center text-slate-400">Select a quiz to edit its answer key</div>
         </div>
       </div>
 
@@ -154,65 +188,69 @@
           <h2 class="text-2xl font-bold mb-6">Launch Scanner</h2>
           
           <div class="space-y-4">
-            <!-- BREAKOUT WARNING ONLY SHOWN ON CAMERA FAILURE -->
+            <!-- Camera Warning -->
             <div v-if="cameraBlocked" class="p-5 bg-amber-50 text-amber-900 border border-amber-300 rounded-lg shadow-sm mb-6">
                <h3 class="font-bold text-lg text-amber-800 mb-2">📸 Camera Permission Denied</h3>
-               <p class="text-sm mb-4">Your browser blocked camera access. If you are viewing this in an embedded preview, you must pop the app out into a full window. If you are already deployed, please click the camera icon in your URL bar to allow access.</p>
-               <a :href="pageUrl" target="_blank" class="block w-full text-center bg-amber-500 text-white py-3 rounded font-bold hover:bg-amber-600 transition shadow-sm mb-2">
-                 Open in Full Window
-               </a>
-               <p class="text-xs text-amber-700 text-center">If the button above does not work, right-click it and select "Open link in new tab".</p>
+               <p class="text-sm">Your browser blocked camera access. Please click the camera icon in your URL bar to allow access, then refresh the page.</p>
             </div>
 
-            <select v-model="scanClass" class="w-full border p-3 rounded outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">-- Choose Section --</option>
-              <option v-for="c in classes" :value="c.ClassID">{{ c.ClassName }}</option>
-            </select>
-            <select v-model="scanQuiz" class="w-full border p-3 rounded outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">-- Choose Quiz --</option>
-              <option v-for="q in quizzes" :value="q.QuizID">{{ q.QuizName }}</option>
-            </select>
-            <button @click="startSession" :disabled="!scanClass || !scanQuiz" class="w-full bg-blue-600 text-white py-4 rounded font-bold disabled:opacity-50 transition">Start Live Projection</button>
+            <div>
+              <label class="block text-sm font-bold mb-2">Select Section</label>
+              <select v-model="scanClass" class="w-full border p-3 rounded outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">-- Choose Section --</option>
+                <option v-for="c in classes" :value="c.ClassID">{{ c.ClassName }}</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-bold mb-2 mt-4">Select Quiz</label>
+              <select v-model="scanQuiz" class="w-full border p-3 rounded outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">-- Choose Quiz --</option>
+                <option v-for="q in quizzes" :value="q.QuizID">{{ q.QuizName }}</option>
+              </select>
+            </div>
+
+            <button @click="startSession" :disabled="!scanClass || !scanQuiz" class="w-full bg-blue-600 text-white py-4 rounded font-bold disabled:opacity-50 transition shadow mt-6">Start Live Projection</button>
           </div>
         </div>
 
         <div v-else class="flex flex-col lg:flex-row gap-6 h-full">
           <!-- Camera Feed -->
-          <div class="w-full lg:w-1/2 bg-black rounded-xl overflow-hidden shadow relative flex flex-col">
-            <div class="bg-slate-900 text-white p-4 flex justify-between items-center z-10">
-              <button @click="qIndex = Math.max(0, qIndex-1)" class="bg-slate-700 px-4 py-2 rounded font-bold hover:bg-slate-600">Previous</button>
+          <div class="w-full lg:w-1/2 bg-black rounded-xl overflow-hidden shadow-xl relative flex flex-col border border-slate-700">
+            <div class="bg-slate-900 text-white p-4 flex justify-between items-center z-10 border-b border-slate-800">
+              <button @click="qIndex = Math.max(0, qIndex-1)" class="bg-slate-700 px-4 py-2 rounded font-bold hover:bg-slate-600 transition">Previous</button>
               <div class="text-center">
                 <div class="font-bold">Question {{ qIndex + 1 }}</div>
-                <div class="text-sm text-slate-400">Key: <span class="text-green-400 text-lg font-bold">{{ activeQuestionKey }}</span></div>
+                <div class="text-sm text-slate-400">Key: <span class="text-green-400 text-lg font-bold ml-1">{{ activeQuestionKey }}</span></div>
               </div>
-              <button @click="qIndex = Math.min(activeQuizData.Questions.length-1, qIndex+1)" class="bg-slate-700 px-4 py-2 rounded font-bold hover:bg-slate-600">Next</button>
+              <button @click="qIndex = Math.min(activeQuizData.Questions.length-1, qIndex+1)" class="bg-slate-700 px-4 py-2 rounded font-bold hover:bg-slate-600 transition">Next</button>
             </div>
             
-            <div class="flex-1 relative bg-black flex items-center justify-center min-h-[400px]">
+            <div class="flex-1 relative bg-black flex items-center justify-center min-h-[300px] md:min-h-[400px]">
                <video ref="video" class="absolute inset-0 w-full h-full object-cover opacity-0 z-0" playsinline muted></video>
                <canvas ref="canvas" class="absolute inset-0 w-full h-full object-cover z-10"></canvas>
             </div>
 
-            <div class="bg-slate-900 p-4 z-10 text-center">
-               <button @click="endSession" class="bg-red-600 text-white px-6 py-2 rounded font-bold hover:bg-red-700">Stop & Exit</button>
+            <div class="bg-slate-900 p-4 z-10 text-center border-t border-slate-800">
+               <button @click="endSession" class="bg-red-600 text-white px-8 py-3 rounded font-bold hover:bg-red-700 transition w-full md:w-auto shadow">Stop & Exit</button>
             </div>
           </div>
 
           <!-- Live Projection Box -->
-          <div class="w-full lg:w-1/2 bg-white rounded-xl shadow border flex flex-col">
-            <div class="bg-slate-800 text-white p-4 font-bold flex justify-between">
+          <div class="w-full lg:w-1/2 bg-white rounded-xl shadow-md border flex flex-col overflow-hidden">
+            <div class="bg-slate-800 text-white p-4 font-bold flex justify-between items-center">
               <span>Live Projection</span>
-              <span class="text-sm text-slate-300">Question {{ qIndex + 1 }}</span>
+              <span class="text-sm bg-slate-700 px-3 py-1 rounded">Question {{ qIndex + 1 }} / {{ activeQuizData.Questions.length }}</span>
             </div>
-            <div class="flex-1 p-4 overflow-y-auto bg-slate-50 grid grid-cols-2 gap-3 content-start">
+            <div class="flex-1 p-4 overflow-y-auto bg-slate-50 grid grid-cols-2 md:grid-cols-3 gap-3 content-start">
                <div v-for="s in currentScanStudents" :key="s.StudentID" 
-                    :class="['p-3 rounded border flex justify-between items-center transition-colors',
+                    :class="['p-3 rounded-lg border flex justify-between items-center transition-all duration-300',
                       getStudentResult(s.StudentID) === null ? 'bg-white border-slate-200 text-slate-500' :
-                      getStudentResult(s.StudentID).isCorrect ? 'bg-green-100 border-green-500 text-green-800 font-bold' :
-                      'bg-red-100 border-red-500 text-red-800 font-bold'
+                      getStudentResult(s.StudentID).isCorrect ? 'bg-green-100 border-green-500 text-green-800 font-bold shadow-sm' :
+                      'bg-red-100 border-red-500 text-red-800 font-bold shadow-sm'
                     ]">
-                 <span>{{ s.RosterNumber }}. {{ s.StudentName.split(' ')[0] }}</span>
-                 <span v-if="getStudentResult(s.StudentID)" class="bg-white px-2 rounded border">{{ getStudentResult(s.StudentID).answer }}</span>
+                 <span class="truncate pr-2">{{ s.RosterNumber }}. {{ s.StudentName.split(' ')[0] }}</span>
+                 <span v-if="getStudentResult(s.StudentID)" class="bg-white px-2 py-0.5 rounded border text-sm">{{ getStudentResult(s.StudentID).answer }}</span>
                </div>
             </div>
           </div>
@@ -223,46 +261,55 @@
       <div v-show="activeTab === 'analytics'" class="h-full flex flex-col print:hidden">
         <div class="bg-white p-6 rounded-xl shadow border mb-6">
           <h2 class="text-xl font-bold mb-4">Analytics</h2>
-          <select v-model="analyticsSession" class="w-full md:w-1/2 border p-3 rounded focus:ring-2 focus:ring-blue-500">
+          <select v-model="analyticsSession" class="w-full md:w-1/2 border p-3 rounded focus:ring-2 focus:ring-blue-500 outline-none">
              <option value="">-- Choose Completed Session --</option>
              <option v-for="sess in uniqueSessions" :value="sess.SessionID">{{ sess.DateStr }} - {{ getClassName(sess.ClassID) }} - {{ getQuizName(sess.QuizID) }}</option>
           </select>
         </div>
 
         <div v-if="analyticsStats" class="flex-1 overflow-y-auto space-y-6 pb-10">
-           <div class="grid grid-cols-3 gap-6">
-             <div class="bg-white p-6 rounded-xl border text-center">
-               <div class="text-slate-500">Mean Score</div>
-               <div class="text-4xl font-bold">{{ analyticsStats.mean }}</div>
+           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+             <div class="bg-white p-6 rounded-xl border text-center shadow-sm">
+               <div class="text-slate-500 font-medium mb-1">Mean Score</div>
+               <div class="text-4xl font-bold text-slate-800">{{ analyticsStats.mean }}</div>
              </div>
-             <div class="bg-white p-6 rounded-xl border text-center">
-               <div class="text-slate-500">Standard Deviation</div>
-               <div class="text-4xl font-bold">{{ analyticsStats.sd }}</div>
+             <div class="bg-white p-6 rounded-xl border text-center shadow-sm">
+               <div class="text-slate-500 font-medium mb-1">Standard Deviation</div>
+               <div class="text-4xl font-bold text-slate-800">{{ analyticsStats.sd }}</div>
              </div>
-             <div class="bg-white p-6 rounded-xl border text-center">
-               <div class="text-slate-500">Participation</div>
-               <div class="text-4xl font-bold">{{ analyticsStats.scores.length }}</div>
+             <div class="bg-white p-6 rounded-xl border text-center shadow-sm">
+               <div class="text-slate-500 font-medium mb-1">Participation</div>
+               <div class="text-4xl font-bold text-slate-800">{{ analyticsStats.scores.length }} <span class="text-sm font-normal text-slate-400">students</span></div>
              </div>
            </div>
 
-           <div class="bg-white p-6 rounded-xl border">
+           <div class="bg-white p-6 rounded-xl border shadow-sm">
              <h3 class="font-bold text-lg mb-4">Item Analysis</h3>
-             <table class="w-full text-left text-sm">
-               <thead class="bg-slate-100">
-                 <tr><th class="p-3">Q#</th><th class="p-3">Key</th><th class="p-3">Correct %</th><th class="p-3">A%</th><th class="p-3">B%</th><th class="p-3">C%</th><th class="p-3">D%</th></tr>
-               </thead>
-               <tbody>
-                 <tr v-for="(item, i) in analyticsStats.itemAnalysis" class="border-b">
-                   <td class="p-3 font-bold">{{ i + 1 }}</td>
-                   <td class="p-3 text-green-600 font-bold">{{ item.key }}</td>
-                   <td class="p-3 font-bold">{{ item.diff }}%</td>
-                   <td class="p-3 text-slate-500">{{ item.A }}%</td>
-                   <td class="p-3 text-slate-500">{{ item.B }}%</td>
-                   <td class="p-3 text-slate-500">{{ item.C }}%</td>
-                   <td class="p-3 text-slate-500">{{ item.D }}%</td>
-                 </tr>
-               </tbody>
-             </table>
+             <div class="overflow-x-auto">
+               <table class="w-full text-left text-sm">
+                 <thead class="bg-slate-100">
+                   <tr><th class="p-3 w-16">Q#</th><th class="p-3 w-16">Key</th><th class="p-3">Correct %</th><th class="p-3 text-center">A%</th><th class="p-3 text-center">B%</th><th class="p-3 text-center">C%</th><th class="p-3 text-center">D%</th></tr>
+                 </thead>
+                 <tbody>
+                   <tr v-for="(item, i) in analyticsStats.itemAnalysis" class="border-b hover:bg-slate-50 transition">
+                     <td class="p-3 font-bold text-slate-600">{{ i + 1 }}</td>
+                     <td class="p-3 text-green-600 font-bold">{{ item.key }}</td>
+                     <td class="p-3 font-bold">
+                       <div class="flex items-center gap-2">
+                         <div class="w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
+                           <div :class="['h-full', item.diff > 70 ? 'bg-green-500' : item.diff > 30 ? 'bg-yellow-500' : 'bg-red-500']" :style="'width:' + item.diff + '%'"></div>
+                         </div>
+                         <span>{{ item.diff }}%</span>
+                       </div>
+                     </td>
+                     <td class="p-3 text-slate-500 text-center">{{ item.A }}%</td>
+                     <td class="p-3 text-slate-500 text-center">{{ item.B }}%</td>
+                     <td class="p-3 text-slate-500 text-center">{{ item.C }}%</td>
+                     <td class="p-3 text-slate-500 text-center">{{ item.D }}%</td>
+                   </tr>
+                 </tbody>
+               </table>
+             </div>
            </div>
         </div>
       </div>
@@ -294,7 +341,11 @@
 
     createApp({
       setup() {
-        const isLoading = ref(true);
+        const isConfigured = ref(false);
+        const tempGasUrl = ref('');
+        const gasUrl = ref(localStorage.getItem('ScanMaster_DB_URL') || '');
+        
+        const isLoading = ref(false);
         const activeTab = ref('classes');
         
         // Data Arrays from GAS
@@ -311,63 +362,85 @@
         const newQuizName = ref('');
         const selectedQuiz = ref('');
         const cameraBlocked = ref(false);
-        const pageUrl = ref(window.location.href);
 
-        // Helper to check for GAS environment
-        const isGAS = typeof google !== 'undefined' && google.script;
+        // API Helper for Fetching
+        const apiCall = async (action, payload = null) => {
+          if (!gasUrl.value) return null;
+          try {
+            const res = await fetch(gasUrl.value, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action, payload }),
+              redirect: 'follow'
+            });
+            return await res.json();
+          } catch(e) {
+            console.error('API Error:', e);
+            return null;
+          }
+        };
 
-        // Fetch Data
-        onMounted(() => {
-          if (isGAS) {
-            google.script.run.withSuccessHandler(data => {
-              classes.value = data.classes || [];
-              students.value = data.students || [];
-              quizzes.value = data.quizzes || [];
-              results.value = data.results || [];
-              isLoading.value = false;
-              
-              // Background sync loop for scans
-              setInterval(() => {
-                if (localScans.value.length > 0) {
-                   const batch = [...localScans.value];
-                   localScans.value = [];
-                   google.script.run.recordScans(batch); // Fire and forget
-                   results.value.push(...batch); // Optimistic local
-                }
-              }, 3000);
-
-            }).getInitialData();
-          } else {
-            // Mock Data for Canvas/Local Preview
-            console.warn("Running outside Google Apps Script. Mock data loaded.");
-            classes.value = [{ ClassID: 'c1', ClassName: 'Demo Section' }];
-            students.value = [{ StudentID: 's1', ClassID: 'c1', RosterNumber: 1, StudentName: 'John Doe' }];
-            quizzes.value = [{ QuizID: 'q1', QuizName: 'Demo Quiz', Questions: [{id: '1', text: 'Q1', answer: 'A'}] }];
-            isLoading.value = false;
-
-            setInterval(() => {
+        const loadDatabase = async () => {
+          if (!gasUrl.value) return;
+          isLoading.value = true;
+          try {
+            const res = await fetch(gasUrl.value, { redirect: 'follow' });
+            if (!res.ok) throw new Error("Network response was not ok");
+            const data = await res.json();
+            
+            classes.value = data.classes || [];
+            students.value = data.students || [];
+            quizzes.value = data.quizzes || [];
+            results.value = data.results || [];
+            isConfigured.value = true;
+            
+            // Start background sync loop
+            setInterval(async () => {
               if (localScans.value.length > 0) {
                  const batch = [...localScans.value];
                  localScans.value = [];
-                 results.value.push(...batch);
+                 await apiCall('recordScans', { scans: batch });
+                 results.value.push(...batch); // Optimistic local update
               }
             }, 3000);
+
+          } catch(e) {
+            alert("Error connecting to database. Please check if the URL is correct and deployed as 'Anyone'.");
+            disconnectDB();
           }
+          isLoading.value = false;
+        };
+
+        onMounted(() => {
+          if (gasUrl.value) loadDatabase();
         });
+
+        const saveConfig = () => {
+          localStorage.setItem('ScanMaster_DB_URL', tempGasUrl.value);
+          gasUrl.value = tempGasUrl.value;
+          loadDatabase();
+        };
+
+        const disconnectDB = () => {
+          localStorage.removeItem('ScanMaster_DB_URL');
+          gasUrl.value = '';
+          tempGasUrl.value = '';
+          isConfigured.value = false;
+        };
 
         // --- CLASSES & STUDENTS ---
         const addClass = () => {
           if (!newClassName.value.trim()) return;
           const id = crypto.randomUUID();
           classes.value.push({ ClassID: id, ClassName: newClassName.value });
-          if (isGAS) google.script.run.modifyDB('addClass', { id, name: newClassName.value });
+          apiCall('modifyDB', { subAction: 'addClass', data: { id, name: newClassName.value } });
           newClassName.value = '';
         };
         const deleteClass = (id) => {
           classes.value = classes.value.filter(c => c.ClassID !== id);
           students.value = students.value.filter(s => s.ClassID !== id);
           if (selectedClass.value === id) selectedClass.value = '';
-          if (isGAS) google.script.run.modifyDB('deleteClass', { id });
+          apiCall('modifyDB', { subAction: 'deleteClass', data: { id } });
         };
         const currentStudents = computed(() => {
           return students.value.filter(s => s.ClassID === selectedClass.value).sort((a,b)=>a.RosterNumber - b.RosterNumber);
@@ -377,12 +450,12 @@
           const roster = currentStudents.value.length + 1;
           const id = crypto.randomUUID();
           students.value.push({ StudentID: id, ClassID: selectedClass.value, RosterNumber: roster, StudentName: newStudentName.value });
-          if (isGAS) google.script.run.modifyDB('addStudent', { id, classId: selectedClass.value, roster, name: newStudentName.value });
+          apiCall('modifyDB', { subAction: 'addStudent', data: { id, classId: selectedClass.value, roster, name: newStudentName.value } });
           newStudentName.value = '';
         };
         const deleteStudent = (id) => {
           students.value = students.value.filter(s => s.StudentID !== id);
-          if (isGAS) google.script.run.modifyDB('deleteStudent', { id });
+          apiCall('modifyDB', { subAction: 'deleteStudent', data: { id } });
         };
 
         const printQRs = () => { window.print(); };
@@ -394,22 +467,24 @@
           if(!newQuizName.value.trim()) return;
           const id = crypto.randomUUID();
           quizzes.value.push({ QuizID: id, QuizName: newQuizName.value, Questions: [] });
-          if (isGAS) google.script.run.modifyDB('saveQuiz', { id, name: newQuizName.value, questions: [] });
+          apiCall('modifyDB', { subAction: 'saveQuiz', data: { id, name: newQuizName.value, questions: [] } });
           newQuizName.value = '';
         };
         const deleteQuiz = (id) => {
           quizzes.value = quizzes.value.filter(q => q.QuizID !== id);
           if(selectedQuiz.value === id) selectedQuiz.value = '';
-          if (isGAS) google.script.run.modifyDB('deleteQuiz', { id });
+          apiCall('modifyDB', { subAction: 'deleteQuiz', data: { id } });
         };
         const selectedQuizData = computed(() => quizzes.value.find(q => q.QuizID === selectedQuiz.value));
         
         const saveQuizData = () => {
-          if(selectedQuizData.value && isGAS) google.script.run.modifyDB('updateQuiz', { id: selectedQuizData.value.QuizID, name: selectedQuizData.value.QuizName, questions: selectedQuizData.value.Questions });
+          if(selectedQuizData.value) {
+            apiCall('modifyDB', { subAction: 'updateQuiz', data: { id: selectedQuizData.value.QuizID, name: selectedQuizData.value.QuizName, questions: selectedQuizData.value.Questions } });
+          }
         };
         const addQuestion = () => {
           if(!selectedQuizData.value) return;
-          selectedQuizData.value.Questions.push({ id: crypto.randomUUID(), text: `Q${selectedQuizData.value.Questions.length + 1}`, answer: 'A' });
+          selectedQuizData.value.Questions.push({ id: crypto.randomUUID(), text: ``, answer: 'A' });
           saveQuizData();
         };
         const removeQuestion = (idx) => {
@@ -443,39 +518,32 @@
            activeSessionId.value = crypto.randomUUID();
            qIndex.value = 0;
            liveSessionResults.value = [];
-           cameraBlocked.value = false; // Reset blocking state
+           cameraBlocked.value = false;
            try {
-             // 1. Check if the API is supported at all
              if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                throw new Error("Your browser does not support camera access or you are not on a secure (HTTPS) connection.");
              }
              
-             // 2. Try rear/environment camera first
              try {
                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
              } catch (err) {
-               if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                 throw err; // Bubble up explicitly denied permissions immediately
-               }
-               // 3. Fallback to default camera if environment camera is missing (e.g. desktop/laptop)
-               console.warn("Environment camera not found, trying default camera...", err);
+               if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') throw err;
                stream = await navigator.mediaDevices.getUserMedia({ video: true });
              }
 
              video.value.srcObject = stream;
-             video.value.setAttribute("playsinline", true); // Required for iOS Safari
+             video.value.setAttribute("playsinline", true);
              await video.value.play();
              scanRaf = requestAnimationFrame(tick);
 
            } catch(e) { 
              console.error("Camera Setup Failed:", e);
              if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
-               // Activate the breakout UI
                cameraBlocked.value = true;
              } else {
                alert("Camera Error: " + e.message);
              }
-             activeSessionId.value = ''; // Reset UI State
+             activeSessionId.value = '';
            }
         };
 
@@ -497,7 +565,6 @@
               const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
               
               if(code) {
-                 // Draw Box
                  ctx.beginPath();
                  ctx.moveTo(code.location.topLeftCorner.x, code.location.topLeftCorner.y);
                  ctx.lineTo(code.location.topRightCorner.x, code.location.topRightCorner.y);
@@ -530,13 +597,8 @@
                            studentId: studentId, qNum: qIndex.value + 1, answer: ans, isCorrect: isCorrect
                         };
 
-                        // Remove old answer for this Q if rescanned
                         liveSessionResults.value = liveSessionResults.value.filter(r => !(r.studentId === studentId && r.qNum === (qIndex.value+1)));
-                        
-                        // Update UI instantly
                         liveSessionResults.value.push(payload);
-                        
-                        // Queue to send to Google Sheets safely
                         localScans.value.push(payload);
                         lastScanMap[studentId] = now;
                     }
@@ -596,6 +658,7 @@
         });
 
         return {
+          isConfigured, tempGasUrl, saveConfig, disconnectDB,
           isLoading, activeTab, classes, students, quizzes,
           newClassName, selectedClass, addClass, deleteClass, currentStudents,
           newStudentName, addStudent, deleteStudent, getClassName, printQRs,
@@ -603,10 +666,10 @@
           scanClass, scanQuiz, activeSessionId, qIndex, startSession, endSession, activeQuizData, activeQuestionKey, currentScanStudents, getStudentResult,
           video, canvas,
           analyticsSession, uniqueSessions, getQuizName, analyticsStats,
-        cameraBlocked, pageUrl
-      };
-    }
-  }).mount('#app');
+          cameraBlocked
+        };
+      }
+    }).mount('#app');
   </script>
   
   <script>
@@ -616,7 +679,7 @@
         navigator.serviceWorker.register('sw.js').then(() => {
           console.log('PWA ServiceWorker registered successfully.');
         }).catch(err => {
-          console.warn('PWA ServiceWorker registration failed. Note: Apps Script does not support sw.js natively. Host on a standard web host for full PWA installability.', err);
+          console.warn('PWA ServiceWorker registration failed.', err);
         });
       });
     }
