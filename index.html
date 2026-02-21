@@ -1,15 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>ScanMaster - Paper Quiz Scanner</title>
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0f172a">
-  
   <link rel="apple-touch-icon" href="https://api.iconify.design/lucide:camera.svg?color=%230f172a">
   <link rel="manifest" href='data:application/manifest+json;utf-8,{"name":"ScanMaster","short_name":"ScanMaster","start_url":".","display":"standalone","background_color":"#f8fafc","theme_color":"#0f172a","icons":[{"src":"https://api.iconify.design/lucide:camera.svg","sizes":"192x192","type":"image/svg+xml"}]}'>
-  
   <!-- Load Vue 3, Tailwind, and JSQR -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -120,49 +116,53 @@
 
       <!-- CLASSES TAB -->
       <div v-show="activeTab === 'classes'" class="flex flex-col md:flex-row gap-6 h-full print:hidden">
-        <div class="w-full md:w-1/3 bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-full overflow-y-auto">
-          <h2 class="text-xl font-bold mb-4">Sections</h2>
+        
+        <!-- Sections Panel -->
+        <div class="w-full md:w-1/3 bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-full overflow-y-auto flex flex-col">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Sections</h2>
+            <button v-if="classQueue.length > 0" @click="saveClasses" :disabled="isSavingClasses" class="bg-green-600 text-white px-3 py-1 rounded text-sm font-bold shadow hover:bg-green-700 disabled:opacity-50 animate-pulse transition">
+              {{ isSavingClasses ? 'Saving...' : '💾 Save Changes' }}
+            </button>
+          </div>
           <div class="flex gap-2 mb-6">
             <input v-model="newClassName" @keyup.enter="addClass" type="text" placeholder="New Section Name" class="flex-1 border rounded px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
             <button @click="addClass" class="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700">+</button>
           </div>
-          <ul class="space-y-2">
+          <ul class="space-y-2 flex-1">
             <li v-for="cls in classes" :key="cls.ClassID" @click="selectedClass = cls.ClassID" :class="['flex justify-between p-3 rounded cursor-pointer border transition', selectedClass === cls.ClassID ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50 border-transparent']">
               <span>{{ cls.ClassName }}</span>
-              <button @click.stop="deleteClass(cls.ClassID)" class="text-red-400 hover:text-red-600 px-2">Del</button>
+              <button @click.stop="deleteClass(cls.ClassID)" class="text-red-400 hover:text-red-600">Del</button>
             </li>
           </ul>
         </div>
 
+        <!-- Students Panel -->
         <div class="w-full md:w-2/3 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-full">
           <div v-if="selectedClass" class="h-full flex flex-col">
              <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
                <h2 class="text-xl font-bold">Students</h2>
-               <button @click="printQRs" class="bg-slate-800 text-white px-4 py-2 rounded text-sm hover:bg-slate-700 shadow flex items-center gap-2">
-                 <span>🖨️</span> Print QR Cards
-               </button>
+               <div class="flex items-center gap-2">
+                 <button v-if="studentQueue.length > 0" @click="saveStudents" :disabled="isSavingStudents" class="bg-green-600 text-white px-3 py-2 rounded text-sm font-bold shadow hover:bg-green-700 disabled:opacity-50 animate-pulse transition">
+                   {{ isSavingStudents ? 'Saving...' : '💾 Save Students' }}
+                 </button>
+                 <button @click="printQRs" class="bg-slate-800 text-white px-4 py-2 rounded text-sm hover:bg-slate-700 shadow">🖨️ Print QR Cards</button>
+               </div>
              </div>
              <div class="flex gap-2 mb-4">
                 <input v-model="newStudentName" @keyup.enter="addStudent" placeholder="Student Name" class="flex-1 border rounded p-2 outline-none focus:ring-2 focus:ring-blue-500">
                 <button @click="addStudent" class="bg-blue-600 text-white px-4 rounded font-bold hover:bg-blue-700">Add</button>
              </div>
-             <div class="flex-1 overflow-y-auto border rounded">
+             <div class="overflow-y-auto border rounded flex-1">
                <table class="w-full text-left text-sm relative">
-                 <thead class="bg-slate-100 sticky top-0 shadow-sm z-10">
-                   <tr>
-                     <th class="p-3 w-16 text-center">Roster #</th>
-                     <th class="p-3">Name</th>
-                     <th class="p-3 w-20">Action</th>
-                   </tr>
+                 <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                   <tr><th class="p-3 w-16 text-center">Roster #</th><th class="p-3">Name</th><th class="p-3 w-20">Action</th></tr>
                  </thead>
                  <tbody>
-                   <tr v-for="stu in currentStudents" :key="stu.StudentID" class="border-b hover:bg-slate-50">
+                   <tr v-for="stu in currentStudents" :key="stu.StudentID" class="border-b">
                      <td class="p-3 font-bold text-slate-500 text-center">{{ stu.RosterNumber }}</td>
                      <td class="p-3">{{ stu.StudentName }}</td>
                      <td class="p-3"><button @click="deleteStudent(stu.StudentID)" class="text-red-400 hover:underline">Remove</button></td>
-                   </tr>
-                   <tr v-if="currentStudents.length === 0">
-                     <td colspan="3" class="text-center p-6 text-slate-400">No students added yet.</td>
                    </tr>
                  </tbody>
                </table>
@@ -174,37 +174,47 @@
 
       <!-- QUIZZES TAB -->
       <div v-show="activeTab === 'quizzes'" class="flex flex-col md:flex-row gap-6 h-full print:hidden">
-        <div class="w-full md:w-1/3 bg-white p-6 rounded-xl shadow border border-slate-200 h-full overflow-y-auto">
-          <h2 class="text-xl font-bold mb-4">Quizzes</h2>
+        
+        <!-- Quizzes Panel -->
+        <div class="w-full md:w-1/3 bg-white p-6 rounded-xl shadow border border-slate-200 h-full overflow-y-auto flex flex-col">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Quizzes</h2>
+            <button v-if="quizQueue.length > 0" @click="saveQuizzes" :disabled="isSavingQuizzes" class="bg-green-600 text-white px-3 py-1 rounded text-sm font-bold shadow hover:bg-green-700 disabled:opacity-50 animate-pulse transition">
+              {{ isSavingQuizzes ? 'Saving...' : '💾 Save Quizzes' }}
+            </button>
+          </div>
           <div class="flex gap-2 mb-6">
             <input v-model="newQuizName" @keyup.enter="addQuiz" type="text" placeholder="Quiz Name" class="flex-1 border rounded px-3 outline-none focus:ring-2 focus:ring-blue-500">
             <button @click="addQuiz" class="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700">+</button>
           </div>
-          <ul class="space-y-2">
+          <ul class="space-y-2 flex-1">
             <li v-for="q in quizzes" :key="q.QuizID" @click="selectedQuiz = q.QuizID" :class="['flex justify-between p-3 rounded cursor-pointer border transition', selectedQuiz === q.QuizID ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50 border-transparent']">
               <span>{{ q.QuizName }}</span>
-              <button @click.stop="deleteQuiz(q.QuizID)" class="text-red-400 hover:text-red-600 px-2">Del</button>
+              <button @click.stop="deleteQuiz(q.QuizID)" class="text-red-400 hover:text-red-600">Del</button>
             </li>
           </ul>
         </div>
 
+        <!-- Answer Key Panel -->
         <div class="w-full md:w-2/3 bg-white p-6 rounded-xl shadow border flex flex-col h-full">
           <div v-if="selectedQuizData" class="flex flex-col h-full">
             <div class="flex justify-between items-center mb-6">
               <h2 class="text-xl font-bold">{{ selectedQuizData.QuizName }} - Answer Key</h2>
-              <button @click="addQuestion" class="bg-blue-100 text-blue-700 px-4 py-2 rounded text-sm font-bold hover:bg-blue-200 transition shadow-sm">+ Question</button>
+              <div class="flex gap-2">
+                <button v-if="hasUnsavedKey" @click="saveQuizKey" :disabled="isSavingKey" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold shadow hover:bg-green-700 disabled:opacity-50 animate-pulse transition">
+                  {{ isSavingKey ? 'Saving...' : '💾 Save Key' }}
+                </button>
+                <button @click="addQuestion" class="bg-blue-100 text-blue-700 px-4 py-2 rounded text-sm font-bold hover:bg-blue-200 transition">+ Question</button>
+              </div>
             </div>
-            <div class="flex-1 overflow-y-auto space-y-3 pr-2">
-              <div v-for="(q, idx) in selectedQuizData.Questions" :key="q.id" class="flex items-center gap-4 bg-slate-50 p-4 rounded-lg border shadow-sm hover:shadow transition-shadow">
-                <span class="font-bold w-8 text-slate-400 text-right">{{ idx + 1 }}.</span>
-                <input v-model="q.text" @change="saveQuizData" class="flex-1 border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400" placeholder="Optional descriptor... (e.g. Chapter 1 Q1)">
-                <select v-model="q.answer" @change="saveQuizData" class="border p-2 rounded font-bold text-blue-600 bg-white outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
-                  <option value="A">A</option>
-                  <option value="B">B</option>
-                  <option value="C">C</option>
-                  <option value="D">D</option>
+            <div class="flex-1 overflow-y-auto space-y-3">
+              <div v-for="(q, idx) in selectedQuizData.Questions" :key="q.id" class="flex items-center gap-4 bg-slate-50 p-4 rounded border">
+                <span class="font-bold w-8 text-slate-400">{{ idx + 1 }}.</span>
+                <input v-model="q.text" @change="markKeyUnsaved" class="flex-1 border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400" placeholder="Optional descriptor...">
+                <select v-model="q.answer" @change="markKeyUnsaved" class="border p-2 rounded font-bold text-blue-600 bg-white outline-none focus:ring-2 focus:ring-blue-400">
+                  <option>A</option><option>B</option><option>C</option><option>D</option>
                 </select>
-                <button @click="removeQuestion(idx)" class="text-red-400 font-bold hover:text-red-600 px-2 text-xl">&times;</button>
+                <button @click="removeQuestion(idx)" class="text-red-400 font-bold hover:text-red-600 px-2">X</button>
               </div>
               <div v-if="selectedQuizData.Questions.length === 0" class="text-center text-slate-400 mt-10">Add questions to build your answer key.</div>
             </div>
@@ -215,33 +225,33 @@
 
       <!-- SCANNER TAB -->
       <div v-show="activeTab === 'scanner'" class="h-full flex flex-col print:hidden">
-        <div v-if="!activeSessionId" class="max-w-xl w-full mx-auto mt-10 bg-white p-8 rounded-xl shadow border">
-          <h2 class="text-2xl font-bold mb-6 text-center text-slate-800">Launch Scanner</h2>
+        <div v-if="!activeSessionId" class="max-w-xl mx-auto mt-10 bg-white p-8 rounded-xl shadow border">
+          <h2 class="text-2xl font-bold mb-6">Launch Scanner</h2>
           
-          <div class="space-y-6">
+          <div class="space-y-4">
             <!-- Camera Warning -->
-            <div v-if="cameraBlocked" class="p-5 bg-amber-50 text-amber-900 border border-amber-300 rounded-lg shadow-sm">
+            <div v-if="cameraBlocked" class="p-5 bg-amber-50 text-amber-900 border border-amber-300 rounded-lg shadow-sm mb-6">
                <h3 class="font-bold text-lg text-amber-800 mb-2">📸 Camera Permission Denied</h3>
                <p class="text-sm">Your browser blocked camera access. Please click the camera icon in your URL bar to allow access, then refresh the page.</p>
             </div>
 
             <div>
-              <label class="block text-sm font-bold mb-2 text-slate-700">Select Section</label>
-              <select v-model="scanClass" class="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 cursor-pointer">
+              <label class="block text-sm font-bold mb-2">Select Section</label>
+              <select v-model="scanClass" class="w-full border p-3 rounded outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">-- Choose Section --</option>
                 <option v-for="c in classes" :value="c.ClassID">{{ c.ClassName }}</option>
               </select>
             </div>
             
             <div>
-              <label class="block text-sm font-bold mb-2 text-slate-700">Select Quiz</label>
-              <select v-model="scanQuiz" class="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 cursor-pointer">
+              <label class="block text-sm font-bold mb-2 mt-4">Select Quiz</label>
+              <select v-model="scanQuiz" class="w-full border p-3 rounded outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">-- Choose Quiz --</option>
                 <option v-for="q in quizzes" :value="q.QuizID">{{ q.QuizName }}</option>
               </select>
             </div>
 
-            <button @click="startSession" :disabled="!scanClass || !scanQuiz" class="w-full bg-blue-600 text-white py-4 rounded-lg font-bold text-lg disabled:opacity-50 hover:bg-blue-700 transition shadow-lg mt-6">Start Live Projection</button>
+            <button @click="startSession" :disabled="!scanClass || !scanQuiz" class="w-full bg-blue-600 text-white py-4 rounded font-bold disabled:opacity-50 transition shadow mt-6">Start Live Projection</button>
           </div>
         </div>
 
@@ -249,49 +259,39 @@
           <!-- Camera Feed -->
           <div class="w-full lg:w-1/2 bg-black rounded-xl overflow-hidden shadow-xl relative flex flex-col border border-slate-700">
             <div class="bg-slate-900 text-white p-4 flex justify-between items-center z-10 border-b border-slate-800">
-              <button @click="qIndex = Math.max(0, qIndex-1)" :disabled="qIndex === 0" class="bg-slate-700 px-4 py-2 rounded font-bold hover:bg-slate-600 disabled:opacity-30 transition">Previous</button>
+              <button @click="qIndex = Math.max(0, qIndex-1)" class="bg-slate-700 px-4 py-2 rounded font-bold hover:bg-slate-600 transition">Previous</button>
               <div class="text-center">
-                <div class="font-bold text-lg">Question {{ qIndex + 1 }}</div>
-                <div class="text-sm text-slate-400">Key: <span class="text-green-400 text-xl font-bold ml-1">{{ activeQuestionKey || '?' }}</span></div>
+                <div class="font-bold">Question {{ qIndex + 1 }}</div>
+                <div class="text-sm text-slate-400">Key: <span class="text-green-400 text-lg font-bold ml-1">{{ activeQuestionKey }}</span></div>
               </div>
-              <button @click="qIndex = Math.min(activeQuizData.Questions.length-1, qIndex+1)" :disabled="qIndex === activeQuizData.Questions.length - 1" class="bg-slate-700 px-4 py-2 rounded font-bold hover:bg-slate-600 disabled:opacity-30 transition">Next</button>
+              <button @click="qIndex = Math.min(activeQuizData.Questions.length-1, qIndex+1)" class="bg-slate-700 px-4 py-2 rounded font-bold hover:bg-slate-600 transition">Next</button>
             </div>
             
-            <div class="flex-1 relative bg-black flex items-center justify-center min-h-[400px]">
+            <div class="flex-1 relative bg-black flex items-center justify-center min-h-[300px] md:min-h-[400px]">
                <video ref="video" class="absolute inset-0 w-full h-full object-cover opacity-0 z-0" playsinline muted></video>
                <canvas ref="canvas" class="absolute inset-0 w-full h-full object-cover z-10"></canvas>
-               
-               <!-- Scanner Targeting Frame overlay -->
-               <div class="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
-                  <div class="w-64 h-64 border-2 border-white/30 rounded-3xl relative">
-                     <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white/80 rounded-tl-xl"></div>
-                     <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white/80 rounded-tr-xl"></div>
-                     <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white/80 rounded-bl-xl"></div>
-                     <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white/80 rounded-br-xl"></div>
-                  </div>
-               </div>
             </div>
 
             <div class="bg-slate-900 p-4 z-10 text-center border-t border-slate-800">
-               <button @click="endSession" class="bg-red-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-red-700 transition shadow w-full md:w-auto">Stop & Exit Scanner</button>
+               <button @click="endSession" class="bg-red-600 text-white px-8 py-3 rounded font-bold hover:bg-red-700 transition w-full md:w-auto shadow">Stop & Exit</button>
             </div>
           </div>
 
           <!-- Live Projection Box -->
-          <div class="w-full lg:w-1/2 bg-white rounded-xl shadow-md border flex flex-col overflow-hidden h-full">
-            <div class="bg-slate-800 text-white p-4 font-bold flex justify-between items-center shadow-md z-10">
-              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Live Projection</span>
-              <span class="text-sm bg-slate-700 px-3 py-1 rounded-full">Question {{ qIndex + 1 }} / {{ activeQuizData.Questions.length }}</span>
+          <div class="w-full lg:w-1/2 bg-white rounded-xl shadow-md border flex flex-col overflow-hidden">
+            <div class="bg-slate-800 text-white p-4 font-bold flex justify-between items-center">
+              <span>Live Projection</span>
+              <span class="text-sm bg-slate-700 px-3 py-1 rounded">Question {{ qIndex + 1 }} / {{ activeQuizData.Questions.length }}</span>
             </div>
-            <div class="flex-1 p-4 overflow-y-auto bg-slate-50 grid grid-cols-2 sm:grid-cols-3 gap-3 content-start">
+            <div class="flex-1 p-4 overflow-y-auto bg-slate-50 grid grid-cols-2 md:grid-cols-3 gap-3 content-start">
                <div v-for="s in currentScanStudents" :key="s.StudentID" 
-                    :class="['p-3 rounded-lg border-2 flex justify-between items-center transition-all duration-300 font-medium',
+                    :class="['p-3 rounded-lg border flex justify-between items-center transition-all duration-300',
                       getStudentResult(s.StudentID) === null ? 'bg-white border-slate-200 text-slate-500' :
-                      getStudentResult(s.StudentID).isCorrect ? 'bg-green-100 border-green-500 text-green-900 shadow' :
-                      'bg-red-100 border-red-500 text-red-900 shadow'
+                      getStudentResult(s.StudentID).isCorrect ? 'bg-green-100 border-green-500 text-green-800 font-bold shadow-sm' :
+                      'bg-red-100 border-red-500 text-red-800 font-bold shadow-sm'
                     ]">
                  <span class="truncate pr-2">{{ s.RosterNumber }}. {{ s.StudentName.split(' ')[0] }}</span>
-                 <span v-if="getStudentResult(s.StudentID)" class="bg-white px-2 py-0.5 rounded border text-sm shadow-sm">{{ getStudentResult(s.StudentID).answer }}</span>
+                 <span v-if="getStudentResult(s.StudentID)" class="bg-white px-2 py-0.5 rounded border text-sm">{{ getStudentResult(s.StudentID).answer }}</span>
                </div>
             </div>
           </div>
@@ -302,7 +302,7 @@
       <div v-show="activeTab === 'analytics'" class="h-full flex flex-col print:hidden">
         <div class="bg-white p-6 rounded-xl shadow border mb-6">
           <h2 class="text-xl font-bold mb-4">Analytics</h2>
-          <select v-model="analyticsSession" class="w-full md:w-1/2 border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50 cursor-pointer">
+          <select v-model="analyticsSession" class="w-full md:w-1/2 border p-3 rounded focus:ring-2 focus:ring-blue-500 outline-none">
              <option value="">-- Choose Completed Session --</option>
              <option v-for="sess in uniqueSessions" :value="sess.SessionID">{{ sess.DateStr }} - {{ getClassName(sess.ClassID) }} - {{ getQuizName(sess.QuizID) }}</option>
           </select>
@@ -312,15 +312,15 @@
            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
              <div class="bg-white p-6 rounded-xl border text-center shadow-sm">
                <div class="text-slate-500 font-medium mb-1">Mean Score</div>
-               <div class="text-4xl font-bold text-blue-600">{{ analyticsStats.mean }}</div>
+               <div class="text-4xl font-bold text-slate-800">{{ analyticsStats.mean }}</div>
              </div>
              <div class="bg-white p-6 rounded-xl border text-center shadow-sm">
                <div class="text-slate-500 font-medium mb-1">Standard Deviation</div>
-               <div class="text-4xl font-bold text-blue-600">{{ analyticsStats.sd }}</div>
+               <div class="text-4xl font-bold text-slate-800">{{ analyticsStats.sd }}</div>
              </div>
              <div class="bg-white p-6 rounded-xl border text-center shadow-sm">
                <div class="text-slate-500 font-medium mb-1">Participation</div>
-               <div class="text-4xl font-bold text-blue-600">{{ analyticsStats.scores.length }} <span class="text-sm font-normal text-slate-400">students</span></div>
+               <div class="text-4xl font-bold text-slate-800">{{ analyticsStats.scores.length }} <span class="text-sm font-normal text-slate-400">students</span></div>
              </div>
            </div>
 
@@ -329,59 +329,47 @@
              <div class="overflow-x-auto">
                <table class="w-full text-left text-sm">
                  <thead class="bg-slate-100">
-                   <tr>
-                     <th class="p-3 w-16">Q#</th>
-                     <th class="p-3 w-16">Key</th>
-                     <th class="p-3">Correct %</th>
-                     <th class="p-3 text-center">A%</th>
-                     <th class="p-3 text-center">B%</th>
-                     <th class="p-3 text-center">C%</th>
-                     <th class="p-3 text-center">D%</th>
-                   </tr>
+                   <tr><th class="p-3 w-16">Q#</th><th class="p-3 w-16">Key</th><th class="p-3">Correct %</th><th class="p-3 text-center">A%</th><th class="p-3 text-center">B%</th><th class="p-3 text-center">C%</th><th class="p-3 text-center">D%</th></tr>
                  </thead>
                  <tbody>
                    <tr v-for="(item, i) in analyticsStats.itemAnalysis" class="border-b hover:bg-slate-50 transition">
                      <td class="p-3 font-bold text-slate-600">{{ i + 1 }}</td>
-                     <td class="p-3 text-green-600 font-bold bg-green-50 text-center rounded-lg">{{ item.key }}</td>
+                     <td class="p-3 text-green-600 font-bold">{{ item.key }}</td>
                      <td class="p-3 font-bold">
                        <div class="flex items-center gap-2">
-                         <div class="w-full max-w-[150px] h-2.5 bg-slate-200 rounded-full overflow-hidden">
-                           <div :class="['h-full rounded-full', item.diff >= 70 ? 'bg-green-500' : item.diff >= 40 ? 'bg-yellow-500' : 'bg-red-500']" :style="'width:' + item.diff + '%'"></div>
+                         <div class="w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
+                           <div :class="['h-full', item.diff > 70 ? 'bg-green-500' : item.diff > 30 ? 'bg-yellow-500' : 'bg-red-500']" :style="'width:' + item.diff + '%'"></div>
                          </div>
-                         <span class="w-10 text-right">{{ item.diff }}%</span>
+                         <span>{{ item.diff }}%</span>
                        </div>
                      </td>
-                     <td class="p-3 text-slate-500 text-center font-mono">{{ item.A }}%</td>
-                     <td class="p-3 text-slate-500 text-center font-mono">{{ item.B }}%</td>
-                     <td class="p-3 text-slate-500 text-center font-mono">{{ item.C }}%</td>
-                     <td class="p-3 text-slate-500 text-center font-mono">{{ item.D }}%</td>
+                     <td class="p-3 text-slate-500 text-center">{{ item.A }}%</td>
+                     <td class="p-3 text-slate-500 text-center">{{ item.B }}%</td>
+                     <td class="p-3 text-slate-500 text-center">{{ item.C }}%</td>
+                     <td class="p-3 text-slate-500 text-center">{{ item.D }}%</td>
                    </tr>
                  </tbody>
                </table>
              </div>
            </div>
         </div>
-        <div v-else-if="analyticsSession" class="flex-1 flex items-center justify-center text-slate-400">
-           No data available for this session.
-        </div>
       </div>
       
     </div> <!-- End Main Content -->
 
-    <!-- Hidden Print Container for QR Cards -->
+    <!-- Hidden Print Container -->
     <div id="print-area" class="hidden">
       <div v-for="s in currentStudents" :key="s.StudentID" class="qr-card">
-         <div class="absolute top-4 left-4 text-xs text-slate-500 font-mono">SEC: {{ getClassName(s.ClassID) }}</div>
+         <div class="absolute top-4 left-4 text-xs text-slate-500">Section: {{ getClassName(s.ClassID) }}</div>
          <div class="qr-wrapper">
            <span class="letter letter-A">A</span>
            <span class="letter letter-B">B</span>
            <span class="letter letter-C">C</span>
            <span class="letter letter-D">D</span>
-           <!-- High contrast QR codes via API -->
            <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(s.StudentID) + '&margin=0'" class="qr-image" crossorigin="anonymous"/>
          </div>
          <div class="absolute bottom-6 right-6 text-right">
-           <div class="font-bold text-4xl">#{{ s.RosterNumber }}</div>
+           <div class="font-bold text-3xl">#{{ s.RosterNumber }}</div>
            <div class="text-xl font-medium mt-1">{{ s.StudentName }}</div>
          </div>
       </div>
@@ -396,7 +384,7 @@
       setup() {
         
         // 👇 PASTE YOUR GOOGLE APPS SCRIPT URL HERE 👇
-        // Example: const HARDCODED_URL = "https://script.google.com/macros/s/AKfycby.../exec";
+        // Example: const HARDCODED_URL = "https://script.google.com/macros/s/AKfycbxyz.../exec";
         const HARDCODED_URL = "https://script.google.com/macros/s/AKfycbyqNakxad-wAgL4L81qQzDDRg6C2DW9nCZ2p8aFCvi2TulE6q5Uj5JSuNGuW_6jknjxjw/exec"; 
         // 👆 ---------------------------------------- 👆
 
@@ -419,6 +407,19 @@
         const results = ref([]); // historical scans
         const localScans = ref([]); // un-synced queue
         
+        // Save Queues for Explicit Saving
+        const classQueue = ref([]);
+        const isSavingClasses = ref(false);
+
+        const studentQueue = ref([]);
+        const isSavingStudents = ref(false);
+
+        const quizQueue = ref([]);
+        const isSavingQuizzes = ref(false);
+
+        const unsavedKeysMap = ref({});
+        const isSavingKey = ref(false);
+
         // UI States
         const newClassName = ref('');
         const selectedClass = ref('');
@@ -428,7 +429,6 @@
         const cameraBlocked = ref(false);
 
         // API Helper for Fetching
-        // Now securely sends User Credentials via POST on every single database request
         const apiCall = async (action, payload = null) => {
           if (!gasUrl.value) return null;
           try {
@@ -446,13 +446,12 @@
             const textData = await res.text();
             if (textData.trim().startsWith('<')) {
               console.warn("API Call Blocked: Deployed with wrong permissions.");
-              return { error: "Permission Error: Google blocked the connection.\n\nDeploy your Google Apps Script with exactly:\n- Execute as: Me\n- Who has access: Anyone" };
+              return { error: "Permission Error: Google blocked the connection. Deploy script with: Execute as: Me, Who has access: Anyone." };
             }
             return JSON.parse(textData);
           } catch(e) {
             console.error('API Error:', e);
-            // Updated error message to explicitly guide users to the CORS / Apps Script deployment fix.
-            return { error: "Network Error: Could not connect to Google Server.\n\nMake sure your Google Apps Script is deployed with:\nWho has access: Anyone" };
+            return { error: "Network Error: Could not connect to Google Server." };
           }
         };
 
@@ -481,6 +480,11 @@
            }
         };
 
+        const toggleAuthMode = () => {
+           authMode.value = authMode.value === 'login' ? 'register' : 'login';
+           authError.value = '';
+        };
+
         const logout = () => {
            isLoggedIn.value = false;
            localStorage.removeItem('ScanMaster_User');
@@ -490,11 +494,12 @@
            students.value = [];
            quizzes.value = [];
            results.value = [];
-        };
-
-        const toggleAuthMode = () => {
-           authMode.value = authMode.value === 'login' ? 'register' : 'login';
-           authError.value = '';
+           
+           // Clear queues on logout so un-saved data gets wiped out
+           classQueue.value = [];
+           studentQueue.value = [];
+           quizQueue.value = [];
+           unsavedKeysMap.value = {};
         };
 
         const loadDatabase = async () => {
@@ -512,7 +517,7 @@
             quizzes.value = data.quizzes || [];
             results.value = data.results || [];
             
-            // Start background sync loop for offline-first capabilities
+            // Start background sync loop for live scans
             setInterval(async () => {
               if (localScans.value.length > 0) {
                  const batch = [...localScans.value];
@@ -525,47 +530,76 @@
           } catch(e) {
             console.error(e);
             alert("Database Sync Error:\n\n" + e.message);
-            logout(); // Kick to login screen on hard fail
+            logout(); // Kick back to login screen on error
           }
           isLoading.value = false;
         };
 
         onMounted(() => {
           if (gasUrl.value && authUser.value && authPass.value) {
-             // Attempt auto-login
              authenticate();
           }
         });
 
-        // --- CLASSES & STUDENTS ---
+        // --- CLASSES & SECTIONS ---
         const addClass = () => {
           if (!newClassName.value.trim()) return;
           const id = crypto.randomUUID();
           classes.value.push({ ClassID: id, ClassName: newClassName.value });
-          apiCall('modifyDB', { subAction: 'addClass', data: { id, name: newClassName.value } });
+          classQueue.value.push({ subAction: 'addClass', data: { id, name: newClassName.value } });
           newClassName.value = '';
         };
+
         const deleteClass = (id) => {
-          if(!confirm("Are you sure you want to delete this section? All related students will be removed locally.")) return;
           classes.value = classes.value.filter(c => c.ClassID !== id);
           students.value = students.value.filter(s => s.ClassID !== id);
           if (selectedClass.value === id) selectedClass.value = '';
-          apiCall('modifyDB', { subAction: 'deleteClass', data: { id } });
+          classQueue.value.push({ subAction: 'deleteClass', data: { id } });
         };
+
+        const saveClasses = async () => {
+          if(classQueue.value.length === 0) return;
+          isSavingClasses.value = true;
+          let successCount = 0;
+          for (let action of classQueue.value) {
+            const res = await apiCall('modifyDB', action);
+            if (res && res.status === 'success') successCount++;
+            else { alert("Error saving. Check internet connection."); break; }
+          }
+          classQueue.value = classQueue.value.slice(successCount);
+          isSavingClasses.value = false;
+        };
+
+        // --- STUDENTS ---
         const currentStudents = computed(() => {
           return students.value.filter(s => s.ClassID === selectedClass.value).sort((a,b)=>a.RosterNumber - b.RosterNumber);
         });
+
         const addStudent = () => {
           if (!newStudentName.value.trim() || !selectedClass.value) return;
           const roster = currentStudents.value.length + 1;
           const id = crypto.randomUUID();
           students.value.push({ StudentID: id, ClassID: selectedClass.value, RosterNumber: roster, StudentName: newStudentName.value });
-          apiCall('modifyDB', { subAction: 'addStudent', data: { id, classId: selectedClass.value, roster, name: newStudentName.value } });
+          studentQueue.value.push({ subAction: 'addStudent', data: { id, classId: selectedClass.value, roster, name: newStudentName.value } });
           newStudentName.value = '';
         };
+
         const deleteStudent = (id) => {
           students.value = students.value.filter(s => s.StudentID !== id);
-          apiCall('modifyDB', { subAction: 'deleteStudent', data: { id } });
+          studentQueue.value.push({ subAction: 'deleteStudent', data: { id } });
+        };
+
+        const saveStudents = async () => {
+          if(studentQueue.value.length === 0) return;
+          isSavingStudents.value = true;
+          let successCount = 0;
+          for (let action of studentQueue.value) {
+            const res = await apiCall('modifyDB', action);
+            if (res && res.status === 'success') successCount++;
+            else { alert("Error saving. Check internet connection."); break; }
+          }
+          studentQueue.value = studentQueue.value.slice(successCount);
+          isSavingStudents.value = false;
         };
 
         const printQRs = () => { window.print(); };
@@ -577,30 +611,63 @@
           if(!newQuizName.value.trim()) return;
           const id = crypto.randomUUID();
           quizzes.value.push({ QuizID: id, QuizName: newQuizName.value, Questions: [] });
-          apiCall('modifyDB', { subAction: 'saveQuiz', data: { id, name: newQuizName.value, questions: [] } });
+          quizQueue.value.push({ subAction: 'saveQuiz', data: { id, name: newQuizName.value, questions: [] } });
           newQuizName.value = '';
         };
+
         const deleteQuiz = (id) => {
-          if(!confirm("Delete this quiz?")) return;
           quizzes.value = quizzes.value.filter(q => q.QuizID !== id);
           if(selectedQuiz.value === id) selectedQuiz.value = '';
-          apiCall('modifyDB', { subAction: 'deleteQuiz', data: { id } });
+          quizQueue.value.push({ subAction: 'deleteQuiz', data: { id } });
         };
+
+        const saveQuizzes = async () => {
+          if(quizQueue.value.length === 0) return;
+          isSavingQuizzes.value = true;
+          let successCount = 0;
+          for (let action of quizQueue.value) {
+            const res = await apiCall('modifyDB', action);
+            if (res && res.status === 'success') successCount++;
+            else { alert("Error saving. Check internet connection."); break; }
+          }
+          quizQueue.value = quizQueue.value.slice(successCount);
+          isSavingQuizzes.value = false;
+        };
+
+        // --- ANSWER KEYS ---
         const selectedQuizData = computed(() => quizzes.value.find(q => q.QuizID === selectedQuiz.value));
-        
-        const saveQuizData = () => {
+        const hasUnsavedKey = computed(() => selectedQuizData.value && unsavedKeysMap.value[selectedQuizData.value.QuizID]);
+
+        const markKeyUnsaved = () => {
           if(selectedQuizData.value) {
-            apiCall('modifyDB', { subAction: 'updateQuiz', data: { id: selectedQuizData.value.QuizID, name: selectedQuizData.value.QuizName, questions: selectedQuizData.value.Questions } });
+            unsavedKeysMap.value[selectedQuizData.value.QuizID] = true;
           }
         };
+
+        const saveQuizKey = async () => {
+          if(!selectedQuizData.value) return;
+          isSavingKey.value = true;
+          const res = await apiCall('modifyDB', { 
+            subAction: 'updateQuiz', 
+            data: { id: selectedQuizData.value.QuizID, name: selectedQuizData.value.QuizName, questions: selectedQuizData.value.Questions } 
+          });
+          if (res && res.status === 'success') {
+             unsavedKeysMap.value[selectedQuizData.value.QuizID] = false;
+          } else {
+             alert("Error saving answer key. Check internet connection.");
+          }
+          isSavingKey.value = false;
+        };
+
         const addQuestion = () => {
           if(!selectedQuizData.value) return;
           selectedQuizData.value.Questions.push({ id: crypto.randomUUID(), text: ``, answer: 'A' });
-          saveQuizData();
+          markKeyUnsaved();
         };
+
         const removeQuestion = (idx) => {
           selectedQuizData.value.Questions.splice(idx, 1);
-          saveQuizData();
+          markKeyUnsaved();
         };
 
         // --- SCANNER ---
@@ -626,10 +693,6 @@
         };
 
         const startSession = async () => {
-           if(activeQuizData.value.Questions.length === 0) {
-               alert("This quiz has no questions! Please add an answer key first.");
-               return;
-           }
            activeSessionId.value = crypto.randomUUID();
            qIndex.value = 0;
            liveSessionResults.value = [];
@@ -640,10 +703,8 @@
              }
              
              try {
-               // Try back camera on mobile first
                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
              } catch (err) {
-               // Fallback to whatever camera is available (PC webcams)
                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') throw err;
                stream = await navigator.mediaDevices.getUserMedia({ video: true });
              }
@@ -682,25 +743,22 @@
               const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
               
               if(code) {
-                 // Draw green box around detected QR
                  ctx.beginPath();
                  ctx.moveTo(code.location.topLeftCorner.x, code.location.topLeftCorner.y);
                  ctx.lineTo(code.location.topRightCorner.x, code.location.topRightCorner.y);
                  ctx.lineTo(code.location.bottomRightCorner.x, code.location.bottomRightCorner.y);
                  ctx.lineTo(code.location.bottomLeftCorner.x, code.location.bottomLeftCorner.y);
                  ctx.closePath();
-                 ctx.lineWidth = 6;
+                 ctx.lineWidth = 4;
                  ctx.strokeStyle = '#22c55e';
                  ctx.stroke();
 
                  const studentId = code.data;
                  const now = Date.now();
                  
-                 // Debounce rapid scans to avoid lag (1.5 seconds)
+                 // Debounce 1.5s
                  if (!lastScanMap[studentId] || now - lastScanMap[studentId] > 1500) {
                     if (currentScanStudents.value.some(s => s.StudentID === studentId)) {
-                        
-                        // Calculate orientation based on QR marker locations
                         const dx = code.location.topLeftCorner.x - code.location.bottomLeftCorner.x;
                         const dy = code.location.topLeftCorner.y - code.location.bottomLeftCorner.y;
                         const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -717,11 +775,8 @@
                            studentId: studentId, qNum: qIndex.value + 1, answer: ans, isCorrect: isCorrect
                         };
 
-                        // Update reactive view
                         liveSessionResults.value = liveSessionResults.value.filter(r => !(r.studentId === studentId && r.qNum === (qIndex.value+1)));
                         liveSessionResults.value.push(payload);
-                        
-                        // Push to offline sync queue
                         localScans.value.push(payload);
                         lastScanMap[studentId] = now;
                     }
@@ -737,10 +792,10 @@
            const map = {};
            results.value.forEach(r => {
              if(!map[r.SessionID]) {
-                map[r.SessionID] = { SessionID: r.SessionID, ClassID: r.ClassID, QuizID: r.QuizID, DateStr: new Date(r.Timestamp).toLocaleDateString() };
+                 map[r.SessionID] = { SessionID: r.SessionID, ClassID: r.ClassID, QuizID: r.QuizID, DateStr: new Date(r.Timestamp).toLocaleDateString() };
              }
            });
-           return Object.values(map).sort((a,b) => new Date(b.DateStr) - new Date(a.DateStr));
+           return Object.values(map);
         });
 
         const analyticsStats = computed(() => {
@@ -785,11 +840,16 @@
           isLoading, activeTab, classes, students, quizzes,
           newClassName, selectedClass, addClass, deleteClass, currentStudents,
           newStudentName, addStudent, deleteStudent, getClassName, printQRs,
-          newQuizName, selectedQuiz, addQuiz, deleteQuiz, selectedQuizData, addQuestion, removeQuestion, saveQuizData,
+          newQuizName, selectedQuiz, addQuiz, deleteQuiz, selectedQuizData, addQuestion, removeQuestion,
           scanClass, scanQuiz, activeSessionId, qIndex, startSession, endSession, activeQuizData, activeQuestionKey, currentScanStudents, getStudentResult,
           video, canvas,
           analyticsSession, uniqueSessions, getQuizName, analyticsStats,
-          cameraBlocked
+          cameraBlocked,
+          
+          classQueue, isSavingClasses, saveClasses,
+          studentQueue, isSavingStudents, saveStudents,
+          quizQueue, isSavingQuizzes, saveQuizzes,
+          hasUnsavedKey, isSavingKey, saveQuizKey, markKeyUnsaved
         };
       }
     }).mount('#app');
