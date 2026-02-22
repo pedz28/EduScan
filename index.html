@@ -442,7 +442,10 @@
                       <span v-if="!isCapturing" class="text-sm md:text-lg">▶️ Start Capturing</span>
                       <span v-else class="text-sm md:text-lg">⏸ Pause Capturing</span>
                    </button>
-                   <button @click="restartTest" class="bg-slate-800 hover:bg-slate-700 text-white px-4 md:px-6 py-3 md:py-4 rounded-xl font-bold transition shadow flex-1 md:flex-none flex justify-center items-center gap-2 border border-slate-700 text-sm md:text-base">
+                   <button @click="undoLastScan" :disabled="liveSessionResults.length === 0" class="bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50 px-4 md:px-6 py-3 md:py-4 rounded-xl font-bold transition shadow flex-1 md:flex-none flex justify-center items-center gap-2 border border-slate-700 text-sm md:text-base" title="Undo Last Scan">
+                      ↩️ Undo
+                   </button>
+                   <button @click="restartTest" class="bg-slate-800 hover:bg-slate-700 text-white px-4 md:px-6 py-3 md:py-4 rounded-xl font-bold transition shadow flex-1 md:flex-none flex justify-center items-center gap-2 border border-slate-700 text-sm md:text-base" title="Restart Session">
                       🔄 Restart
                    </button>
                    <button @click="confirmExitSession" class="bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white px-4 md:px-6 py-3 md:py-4 rounded-xl font-bold transition shadow-lg w-full md:w-auto flex justify-center items-center gap-2 transform hover:-translate-y-1 text-sm md:text-base mt-1 md:mt-0">
@@ -1415,6 +1418,24 @@
            }
         };
 
+        const undoLastScan = () => {
+            if (liveSessionResults.value.length === 0) return;
+            const lastScan = liveSessionResults.value.pop(); // Remove from live session
+            
+            // Remove from local un-synced queue
+            localScans.value = localScans.value.filter(r => 
+                !(r.StudentID === lastScan.StudentID && r.QuestionNum === lastScan.QuestionNum && r.SessionID === lastScan.SessionID)
+            );
+            
+            // Remove from historical results 
+            results.value = results.value.filter(r => 
+                !(r.StudentID === lastScan.StudentID && r.QuestionNum === lastScan.QuestionNum && r.SessionID === lastScan.SessionID)
+            );
+            
+            // Reset the debounce timer so they can scan immediately again
+            delete lastScanMap[lastScan.StudentID];
+        };
+
         const restartTest = () => {
            if (!confirm("Are you sure you want to restart the test? This will return to the first item and reset your current live progress.")) return;
            qIndex.value = 0;
@@ -1584,7 +1605,7 @@
           newClassName, selectedClass, addClass, deleteClass, currentStudents,
           newStudentName, bulkStudentText, addStudent, bulkAddStudents, deleteStudent, getClassName, printQRs,
           newQuizName, selectedQuiz, addQuiz, deleteQuiz, selectedQuizData, addQuestion, removeQuestion, addChoice, removeChoice, getOptStyles, markKeyUnsaved,
-          scanClass, scanQuiz, activeSessionId, qIndex, isCapturing, projectQuestion, startSession, restartTest, confirmExitSession, endSession, activeQuizData, activeQuestionKey, currentScanStudents, getStudentResult,
+          scanClass, scanQuiz, activeSessionId, qIndex, isCapturing, projectQuestion, startSession, undoLastScan, restartTest, confirmExitSession, endSession, activeQuizData, activeQuestionKey, currentScanStudents, getStudentResult,
           video, canvas, openProjectionWindow,
           analyticsSession, uniqueSessions, getQuizName, analyticsStats, deleteCurrentSession,
           cameraBlocked
