@@ -134,15 +134,16 @@
         <button @click="activeTab = 'analytics'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'analytics' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📊 Analytics</button>
       </nav>
       
-      <!-- Added shrink-0 to ensure the sign-out button is ALWAYS visible -->
+      <!-- Desktop Bottom Bar -->
       <div class="p-6 border-t border-blue-500/20 bg-black/20 relative z-10 backdrop-blur-md shrink-0">
          <div class="text-sm font-bold text-white flex items-center gap-2">
             <span class="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(52,211,153,1)]" :class="isOffline ? 'bg-amber-400 shadow-amber-400' : 'bg-emerald-400'"></span> 
             {{ authUser }}
          </div>
-         <div class="flex flex-col gap-2 mt-4">
-           <button @click="forceSync" class="text-sm p-3 bg-white/5 border border-white/10 rounded-xl text-emerald-300 hover:text-white hover:bg-emerald-500/20 font-bold w-full text-left transition flex items-center gap-3">🔄 Sync Data</button>
-           <button @click="logout" class="text-sm p-3 bg-white/5 border border-white/10 rounded-xl text-rose-300 hover:text-white hover:bg-rose-500/20 font-bold w-full text-left transition flex items-center gap-3">🚪 Sign Out</button>
+         <div class="flex flex-col gap-3 mt-5">
+           <!-- Increased min height to 48px (~0.5 inches) and padding for large clickable area -->
+           <button @click="forceSync" class="text-base p-4 min-h-[48px] bg-white/5 border border-white/10 rounded-xl text-emerald-300 hover:text-white hover:bg-emerald-500/20 font-bold w-full text-left transition flex items-center gap-3 shadow-sm">🔄 Sync Data</button>
+           <button @click="logout" class="text-base p-4 min-h-[48px] bg-white/5 border border-white/10 rounded-xl text-rose-300 hover:text-white hover:bg-rose-500/20 font-bold w-full text-left transition flex items-center gap-3 shadow-sm">🚪 Sign Out</button>
          </div>
       </div>
     </div>
@@ -151,14 +152,15 @@
     <div v-if="isLoggedIn" :class="['md:hidden fixed left-0 right-0 bg-gradient-to-r from-slate-900 to-blue-900 text-white p-3 flex justify-between items-center z-20 print:hidden shadow-lg border-b border-blue-500/20 transition-all', isOffline ? 'top-10' : 'top-0']">
       <div class="font-extrabold text-xl flex items-center gap-2">📸 ScanMaster</div>
       <div class="flex items-center gap-2">
-        <select v-model="activeTab" class="bg-black/30 border border-blue-500/30 outline-none text-sm p-2 rounded-lg text-white font-bold backdrop-blur-sm max-w-[100px] h-11">
+        <select v-model="activeTab" class="bg-black/30 border border-blue-500/30 outline-none text-sm p-2 rounded-lg text-white font-bold backdrop-blur-sm max-w-[100px] h-12">
           <option value="classes" class="text-slate-800">Sections</option>
           <option value="quizzes" class="text-slate-800">Quizzes</option>
           <option value="scanner" class="text-slate-800">Scanner</option>
           <option value="analytics" class="text-slate-800">Analytics</option>
         </select>
-        <button @click="forceSync" class="text-2xl w-11 h-11 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl transition-all active:scale-95" title="Sync Data">🔄</button>
-        <button @click="logout" class="text-2xl w-11 h-11 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl transition-all active:scale-95" title="Sign Out">🚪</button>
+        <!-- Buttons are 48x48px (min-h-[48px] w-12 h-12) to comfortably exceed 0.25 inches -->
+        <button @click="forceSync" class="text-2xl w-12 h-12 min-w-[48px] min-h-[48px] flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl transition-all active:scale-95" title="Sync Data">🔄</button>
+        <button @click="logout" class="text-2xl w-12 h-12 min-w-[48px] min-h-[48px] flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl transition-all active:scale-95" title="Sign Out">🚪</button>
       </div>
     </div>
 
