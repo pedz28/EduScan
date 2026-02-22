@@ -414,13 +414,12 @@
   </div>
 
   <script>
-    const { createApp, ref, computed, onMounted } = Vue;
+    const { createApp, ref, computed, onMounted, watch } = Vue;
 
     createApp({
       setup() {
         
         // 👇 PASTE YOUR GOOGLE APPS SCRIPT URL HERE 👇
-        // Example: const HARDCODED_URL = "https://script.google.com/macros/s/AKfycbxyz.../exec";
         const HARDCODED_URL = "https://script.google.com/macros/s/AKfycbyqNakxad-wAgL4L81qQzDDRg6C2DW9nCZ2p8aFCvi2TulE6q5Uj5JSuNGuW_6jknjxjw/exec"; 
         // 👆 ---------------------------------------- 👆
 
@@ -444,6 +443,9 @@
         const localScans = ref([]); // un-synced queue
         let syncInterval = null; // Used to prevent duplicate background loops on multiple logins
         
+        // Lazy loading tracking for Quizzes
+        const areQuizzesLoaded = ref(false);
+
         // Save Queues for Explicit Saving
         const classQueue = ref([]);
         const isSavingClasses = ref(false);
@@ -553,6 +555,8 @@
            quizQueue.value = [];
            unsavedKeysMap.value = {};
            
+           areQuizzesLoaded.value = false; // Reset lazy loading
+
            // Stop background syncing safely
            if (syncInterval) {
                clearInterval(syncInterval);
@@ -572,7 +576,10 @@
             
             classes.value = data.classes || [];
             students.value = data.students || [];
-            quizzes.value = data.quizzes || [];
+            
+            // SKIPPED ON LOGIN: quizzes.value = data.quizzes; 
+            // We now rely on lazy-loading when navigating to quiz-related tabs
+            
             results.value = data.results || [];
             
             // Clean up any old intervals before starting a new one
@@ -594,7 +601,35 @@
             logout(); // Kick back to login screen on error
           }
           isLoading.value = false;
+          
+          // If the user happens to start on a quiz-dependent tab, trigger fetch immediately
+          if (['quizzes', 'scanner', 'analytics'].includes(activeTab.value)) {
+             loadQuizzes();
+          }
         };
+
+        // --- LAZY LOAD QUIZZES ---
+        const loadQuizzes = async () => {
+           if (areQuizzesLoaded.value || !isLoggedIn.value) return;
+           isLoading.value = true;
+           try {
+              const res = await apiCall('getQuizzes');
+              if (res && res.error) throw new Error(res.error);
+              quizzes.value = res?.quizzes || [];
+              areQuizzesLoaded.value = true;
+           } catch (e) {
+              console.error(e);
+              alert("Failed to sync quizzes: " + e.message);
+           }
+           isLoading.value = false;
+        };
+
+        // Watch tab changes to lazy-load quizzes only when needed
+        watch(activeTab, (newTab) => {
+           if (['quizzes', 'scanner', 'analytics'].includes(newTab)) {
+              loadQuizzes();
+           }
+        });
 
         onMounted(() => {
           if (gasUrl.value && authUser.value && authPass.value) {
@@ -908,7 +943,7 @@
 
         return {
           gasUrl, isLoggedIn, authMode, authUser, authPass, authError, authenticate, toggleAuthMode, logout,
-          isLoading, activeTab, classes, students, quizzes,
+          isLoading, activeTab, classes, students, quizzes, areQuizzesLoaded,
           newClassName, selectedClass, addClass, deleteClass, currentStudents,
           newStudentName, addStudent, deleteStudent, getClassName, printQRs,
           newQuizName, selectedQuiz, addQuiz, deleteQuiz, selectedQuizData, addQuestion, removeQuestion,
