@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scanmaster-pwa-v6'; // Bumped version to force cache refresh
+const CACHE_NAME = 'scanmaster-pwa-v7'; // Bumped version to force cache refresh and load new delete logic
 const ASSETS_TO_CACHE = [
   './',
   './index.html', 
