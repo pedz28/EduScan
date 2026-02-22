@@ -122,18 +122,18 @@
       <!-- Decorative sidebar shapes -->
       <div class="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl pointer-events-none -mt-10 -mr-10"></div>
       
-      <!-- ADDED shrink-0 so header doesn't compress on short screens -->
+      <!-- shrink-0 so header doesn't compress on short screens -->
       <div :class="['p-8 font-extrabold text-3xl tracking-wider flex items-center gap-3 border-b border-blue-500/20 relative z-10 drop-shadow-md shrink-0', isOffline ? 'mt-10' : '']">
         📸 <span class="bg-clip-text text-transparent bg-gradient-to-r from-white to-cyan-200">ScanMaster</span>
       </div>
-      <!-- ADDED overflow-y-auto so navigation scrolls if window is too short -->
+      <!-- overflow-y-auto so navigation scrolls if window is too short -->
       <nav class="flex-1 py-6 space-y-2 relative z-10 overflow-y-auto overscroll-contain">
         <button @click="activeTab = 'classes'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'classes' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">👥 Sections & Students</button>
         <button @click="activeTab = 'quizzes'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'quizzes' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📝 Quizzes & Keys</button>
         <button @click="activeTab = 'scanner'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'scanner' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📷 Live Scanner</button>
         <button @click="activeTab = 'analytics'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'analytics' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📊 Analytics</button>
       </nav>
-      <!-- ADDED shrink-0 so footer always stays visible -->
+      <!-- shrink-0 so footer always stays visible -->
       <div class="p-6 border-t border-blue-500/20 bg-black/20 relative z-10 backdrop-blur-md flex flex-col gap-3 shrink-0">
          <div class="text-sm font-bold text-white mb-2 flex items-center gap-2">
             <span class="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(52,211,153,1)]" :class="isOffline ? 'bg-amber-400 shadow-amber-400' : 'bg-emerald-400'"></span> 
@@ -428,8 +428,9 @@
                 </div>
                 
                 <div class="flex-1 relative bg-black flex items-center justify-center min-h-0">
-                   <video ref="video" class="absolute inset-0 w-full h-full object-cover opacity-0 z-0" playsinline muted></video>
-                   <canvas ref="canvas" class="absolute inset-0 w-full h-full object-cover z-10"></canvas>
+                   <!-- CHANGED: object-cover replaced with object-contain to prevent aggressive cropping in landscape/desktop modes -->
+                   <video ref="video" class="absolute inset-0 w-full h-full object-contain opacity-0 z-0" playsinline muted></video>
+                   <canvas ref="canvas" class="absolute inset-0 w-full h-full object-contain z-10"></canvas>
                    
                    <!-- Scanner Targeting Frame overlay -->
                    <div v-if="isCapturing" class="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
