@@ -136,11 +136,14 @@
       
       <!-- Added shrink-0 to ensure the sign-out button is ALWAYS visible -->
       <div class="p-6 border-t border-blue-500/20 bg-black/20 relative z-10 backdrop-blur-md shrink-0">
-         <div class="text-sm font-bold text-white mb-2 flex items-center gap-2">
+         <div class="text-sm font-bold text-white mb-3 flex items-center gap-2">
             <span class="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(52,211,153,1)]" :class="isOffline ? 'bg-amber-400 shadow-amber-400' : 'bg-emerald-400'"></span> 
             {{ authUser }}
          </div>
-         <button @click="logout" class="text-xs text-blue-300 hover:text-white font-bold w-full text-left transition flex items-center gap-2">🚪 Sign Out</button>
+         <div class="flex flex-col gap-3">
+           <button @click="forceSync" class="text-xs text-emerald-300 hover:text-white font-bold w-full text-left transition flex items-center gap-2">🔄 Sync Data</button>
+           <button @click="logout" class="text-xs text-rose-300 hover:text-white font-bold w-full text-left transition flex items-center gap-2">🚪 Sign Out</button>
+         </div>
       </div>
     </div>
 
@@ -154,7 +157,8 @@
           <option value="scanner" class="text-slate-800">Scanner</option>
           <option value="analytics" class="text-slate-800">Analytics</option>
         </select>
-        <button @click="logout" class="text-2xl hover:scale-110 transition">🚪</button>
+        <button @click="forceSync" class="text-xl hover:scale-110 transition" title="Sync Data">🔄</button>
+        <button @click="logout" class="text-2xl hover:scale-110 transition" title="Sign Out">🚪</button>
       </div>
     </div>
 
@@ -626,6 +630,7 @@
         const results = ref([]); // historical scans
         const localScans = ref([]); // un-synced queue
         let syncInterval = null; // Used to prevent duplicate background loops on multiple logins
+        let autoPullInterval = null; // Used for silent background pulling across devices
         
         // Lazy loading tracking for Quizzes
         const areQuizzesLoaded = ref(false);
@@ -785,6 +790,10 @@
                clearInterval(syncInterval);
                syncInterval = null;
            }
+           if (autoPullInterval) {
+               clearInterval(autoPullInterval);
+               autoPullInterval = null;
+           }
         };
 
         const persistLocalData = () => {
@@ -820,6 +829,32 @@
                 });
             });
             return quizzesList;
+        };
+
+        const silentSync = async () => {
+            if (isOffline.value || !isLoggedIn.value || isLoading.value) return;
+            // Prevent silent pull if active local saves are pending to prevent overwriting local states
+            if (isSavingClasses.value || isSavingStudents.value || isSavingQuizzes.value || isSavingKey.value) return;
+            if (classQueue.value.length > 0 || studentQueue.value.length > 0 || quizQueue.value.length > 0) return;
+
+            try {
+                const data = await apiCall('getData');
+                if (data && !data.error) {
+                    classes.value = data.classes || [];
+                    students.value = data.students || [];
+                    results.value = [...(data.results || []), ...localScans.value];
+                }
+                
+                // If quizzes are loaded in memory, silently refresh them too
+                if (areQuizzesLoaded.value) {
+                    const qRes = await apiCall('getQuizzes');
+                    if (qRes && !qRes.error) {
+                        quizzes.value = migrateQuizData(qRes.quizzes || []);
+                    }
+                }
+            } catch (e) {
+                console.warn("Silent background sync failed:", e);
+            }
         };
 
         const loadDatabase = async () => {
@@ -883,6 +918,9 @@
               
             }, 3000);
 
+            if (autoPullInterval) clearInterval(autoPullInterval);
+            autoPullInterval = setInterval(silentSync, 15000); // Quietly pull fresh data every 15 seconds
+
           } catch(e) {
             console.error(e);
             alert("Database Sync Error:\n\n" + e.message);
@@ -916,6 +954,30 @@
            isLoading.value = false;
         };
 
+        const forceSync = async () => {
+            if (isOffline.value) {
+                alert("You are currently offline. Please reconnect to the internet to sync data.");
+                return;
+            }
+            
+            // Force flush of all background queues first
+            if (classQueue.value.length > 0 && !isSavingClasses.value) await saveClasses();
+            if (studentQueue.value.length > 0 && !isSavingStudents.value) await saveStudents();
+            if (quizQueue.value.length > 0 && !isSavingQuizzes.value) await saveQuizzes();
+            
+            if (localScans.value.length > 0) {
+               const batch = [...localScans.value];
+               const res = await apiCall('recordScans', { scans: batch });
+               if (res && res.status === 'success') {
+                   localScans.value = localScans.value.slice(batch.length);
+               }
+            }
+            
+            // Force refresh all arrays
+            areQuizzesLoaded.value = false;
+            await loadDatabase();
+        };
+
         watch(activeTab, (newTab) => {
            if (['quizzes', 'scanner', 'analytics'].includes(newTab)) {
               loadQuizzes();
@@ -925,6 +987,13 @@
         onMounted(() => {
           window.addEventListener('online', () => isOffline.value = false);
           window.addEventListener('offline', () => isOffline.value = true);
+
+          // Silent sync when app comes back to foreground
+          document.addEventListener('visibilitychange', () => {
+             if (document.visibilityState === 'visible' && isLoggedIn.value && !isOffline.value) {
+                 silentSync();
+             }
+          });
 
           // REAL-TIME CROSS-TAB SYNC LISTENER
           // Actively updates the application interface when a second tab changes local storage data.
@@ -1458,7 +1527,7 @@
 
         return {
           gasUrl, isLoggedIn, isOffline, authMode, authUser, authPass, authError, authenticate, toggleAuthMode, logout,
-          isLoading, activeTab, classes, students, quizzes, areQuizzesLoaded,
+          isLoading, activeTab, classes, students, quizzes, areQuizzesLoaded, forceSync,
           newClassName, selectedClass, addClass, deleteClass, currentStudents,
           newStudentName, bulkStudentText, addStudent, bulkAddStudents, deleteStudent, getClassName, printQRs,
           newQuizName, selectedQuiz, addQuiz, deleteQuiz, selectedQuizData, addQuestion, removeQuestion, addChoice, removeChoice, getOptStyles,
