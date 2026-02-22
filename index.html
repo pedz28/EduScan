@@ -3,9 +3,9 @@
 <head>
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#0f172a">
-  <link rel="apple-touch-icon" href="https://api.iconify.design/lucide:camera.svg?color=%230f172a">
-  <link rel="manifest" href='data:application/manifest+json;utf-8,{"name":"ScanMaster","short_name":"ScanMaster","start_url":".","display":"standalone","background_color":"#f8fafc","theme_color":"#0f172a","icons":[{"src":"https://api.iconify.design/lucide:camera.svg","sizes":"192x192","type":"image/svg+xml"}]}'>
+  <meta name="theme-color" content="#1e3a8a">
+  <link rel="apple-touch-icon" href="https://api.iconify.design/lucide:camera.svg?color=%231e3a8a">
+  <link rel="manifest" href='data:application/manifest+json;utf-8,{"name":"ScanMaster","short_name":"ScanMaster","start_url":".","display":"standalone","background_color":"#f8fafc","theme_color":"#1e3a8a","icons":[{"src":"https://api.iconify.design/lucide:camera.svg","sizes":"192x192","type":"image/svg+xml"}]}'>
   <!-- Load Vue 3, Tailwind, and JSQR -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -15,433 +15,571 @@
     [v-cloak] { display: none; }
     
     /* Dedicated Print CSS for perfectly sizing the QR cards to exactly half an A4 page */
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    
     @media print {
+      html, body {
+        width: 210mm;
+        height: 297mm;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+      }
       body * { visibility: hidden; }
       #print-area, #print-area * { visibility: visible; }
-      #print-area { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
+      #print-area { 
+        position: absolute; left: 0; top: 0; width: 210mm; 
+        display: block !important; 
+        background: white;
+      }
       
       .qr-card {
-        width: 100%;
-        height: 148mm; /* Exactly half the height of A4 portrait */
+        width: 210mm;
+        height: 148.5mm; /* Exactly half of A4 portrait (297mm / 2) */
         page-break-inside: avoid;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        border-bottom: 2px dashed #94a3b8;
+        border-bottom: 2px dashed #cbd5e1;
         position: relative;
         box-sizing: border-box;
+        overflow: hidden;
       }
       .qr-card:nth-child(even) { page-break-after: always; border-bottom: none; }
       
-      .qr-wrapper { position: relative; width: 300px; height: 300px; margin-top: 20px;}
-      .qr-image { width: 100%; height: 100%; image-rendering: pixelated; }
+      .qr-wrapper { position: relative; width: 110mm; height: 110mm; margin-top: 10mm; }
+      .qr-image { width: 100%; height: 100%; image-rendering: pixelated; object-fit: contain; }
       
-      .letter { position: absolute; font-size: 18pt; font-weight: bold; font-family: sans-serif; }
-      .letter-A { top: -35px; left: 50%; transform: translateX(-50%); }
-      .letter-B { right: -35px; top: 50%; transform: translateY(-50%) rotate(90deg); }
-      .letter-C { bottom: -35px; left: 50%; transform: translateX(-50%) rotate(180deg); }
-      .letter-D { left: -35px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
+      /* Make the orientation letters large and bold for the camera */
+      .letter { position: absolute; font-size: 32pt; font-weight: 900; font-family: ui-sans-serif, system-ui, sans-serif; color: #0f172a; }
+      .letter-A { top: -15mm; left: 50%; transform: translateX(-50%); }
+      .letter-B { right: -15mm; top: 50%; transform: translateY(-50%) rotate(90deg); }
+      .letter-C { bottom: -15mm; left: 50%; transform: translateX(-50%) rotate(180deg); }
+      .letter-D { left: -15mm; top: 50%; transform: translateY(-50%) rotate(-90deg); }
+
+      /* Styling for the student/section labels on the printed paper */
+      .print-sec { position: absolute; top: 15mm; left: 15mm; font-size: 16pt; color: #64748b; font-weight: bold; font-family: monospace;}
+      .print-info { position: absolute; bottom: 15mm; right: 15mm; text-align: right; font-family: ui-sans-serif, system-ui, sans-serif;}
+      .print-info .num { font-size: 50pt; font-weight: 900; color: #0f172a; line-height: 1;}
+      .print-info .name { font-size: 22pt; font-weight: 700; color: #334155; margin-top: 4px;}
     }
+
+    /* Custom Scrollbar for a polished look */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans h-screen">
+<body class="bg-gradient-to-br from-slate-100 via-blue-50 to-slate-200 text-slate-800 font-sans h-screen overflow-hidden">
   <div id="app" v-cloak class="flex h-full print:block">
     
-    <!-- Login/Register Screen (Main Entry Point) -->
-    <div v-if="!isLoggedIn" class="absolute inset-0 bg-slate-900 flex items-center justify-center z-50 text-white p-6">
-       <div class="bg-slate-800 p-8 rounded-xl shadow-2xl max-w-sm w-full border border-slate-700">
+    <!-- Login/Register Screen -->
+    <div v-if="!isLoggedIn" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-blue-700 flex flex-col items-center justify-center z-50 p-4 md:p-6 overflow-hidden">
+       <!-- Decorative background elements -->
+       <div class="absolute top-10 left-10 w-48 h-48 md:w-72 md:h-72 bg-blue-400/20 rounded-full blur-3xl pointer-events-none"></div>
+       <div class="absolute bottom-10 right-10 w-64 h-64 md:w-96 md:h-96 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none"></div>
+       
+       <div class="bg-white/95 backdrop-blur-xl p-8 md:p-10 rounded-[2rem] shadow-2xl max-w-sm w-full border border-blue-200/50 text-slate-800 relative z-10">
           <div class="flex justify-center mb-6">
-            <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-3xl shadow-lg shadow-blue-500/50">📸</div>
+            <div class="w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-4xl shadow-lg shadow-blue-500/50 text-white ring-4 ring-white">📸</div>
           </div>
-          <h1 class="text-2xl font-bold text-center mb-2">Welcome to ScanMaster</h1>
-          <p class="text-slate-400 text-center mb-6 text-sm">{{ authMode === 'login' ? 'Login to your account' : 'Create a new account' }}</p>
+          <h1 class="text-3xl font-extrabold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-cyan-600">ScanMaster</h1>
+          <p class="text-slate-500 text-center mb-8 text-sm font-medium">{{ authMode === 'login' ? 'Welcome back! Login below.' : 'Create your educator account' }}</p>
           
-          <input v-model="authUser" type="text" placeholder="Username" class="w-full bg-slate-900 border border-slate-600 rounded px-4 py-3 mb-4 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition">
-          <input v-model="authPass" type="password" placeholder="Password" class="w-full bg-slate-900 border border-slate-600 rounded px-4 py-3 mb-6 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" @keyup.enter="authenticate">
+          <input v-model="authUser" type="text" placeholder="Username" class="w-full bg-slate-50 border-none rounded-xl px-5 py-4 mb-4 text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 shadow-inner transition">
+          <input v-model="authPass" type="password" placeholder="Password" class="w-full bg-slate-50 border-none rounded-xl px-5 py-4 mb-6 text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 shadow-inner transition" @keyup.enter="authenticate">
           
-          <div v-if="authError" class="text-red-400 text-sm mb-4 text-center font-medium p-3 bg-red-900/30 rounded border border-red-800/50 whitespace-pre-wrap">{{ authError }}</div>
+          <div v-if="authError" class="text-rose-600 text-sm mb-4 text-center font-bold p-3 bg-rose-100 rounded-xl border border-rose-200 whitespace-pre-wrap">{{ authError }}</div>
           
-          <button @click="authenticate" :disabled="isLoading" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-500 transition shadow-lg mb-4 flex justify-center items-center">
+          <button @click="authenticate" :disabled="isLoading" class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold py-4 rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg shadow-cyan-500/30 transform hover:-translate-y-0.5 mb-6 flex justify-center items-center">
              <span v-if="!isLoading">{{ authMode === 'login' ? 'Login' : 'Register' }}</span>
-             <span v-else class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+             <span v-else class="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></span>
           </button>
           
-          <div class="text-center text-sm text-slate-400 cursor-pointer hover:text-white transition" @click="toggleAuthMode">
+          <div class="text-center text-sm font-bold text-slate-500 cursor-pointer hover:text-blue-600 transition" @click="toggleAuthMode">
              {{ authMode === 'login' ? "Don't have an account? Register" : 'Already have an account? Login' }}
           </div>
        </div>
+
+       <!-- Powered by PVNJ Footer Note -->
+       <div class="relative z-10 mt-6 text-center text-[9pt] italic text-blue-100/80 font-medium tracking-wide">
+          Powered by: PVNJ
+       </div>
     </div>
 
-    <!-- Sidebar -->
-    <div v-if="isLoggedIn" class="w-64 bg-slate-900 text-slate-300 flex-col shadow-xl z-10 hidden md:flex print:hidden">
-      <div class="p-6 text-white font-bold text-2xl tracking-wider flex items-center gap-2 border-b border-slate-800">
-        ScanMaster
+    <!-- Lively Sidebar -->
+    <div v-if="isLoggedIn" class="w-72 bg-gradient-to-b from-slate-900 via-blue-900 to-blue-950 text-white flex-col shadow-2xl z-10 hidden md:flex print:hidden relative overflow-hidden">
+      <!-- Decorative sidebar shapes -->
+      <div class="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl pointer-events-none -mt-10 -mr-10"></div>
+      
+      <div class="p-8 font-extrabold text-3xl tracking-wider flex items-center gap-3 border-b border-blue-500/20 relative z-10 drop-shadow-md">
+        📸 <span class="bg-clip-text text-transparent bg-gradient-to-r from-white to-cyan-200">ScanMaster</span>
       </div>
-      <nav class="flex-1 py-4">
-        <button @click="activeTab = 'classes'" :class="['w-full text-left px-6 py-4 font-medium transition-colors border-l-4', activeTab === 'classes' ? 'bg-blue-600 text-white border-blue-400' : 'hover:bg-slate-800 border-transparent']">Sections & Students</button>
-        <button @click="activeTab = 'quizzes'" :class="['w-full text-left px-6 py-4 font-medium transition-colors border-l-4', activeTab === 'quizzes' ? 'bg-blue-600 text-white border-blue-400' : 'hover:bg-slate-800 border-transparent']">Quizzes & Keys</button>
-        <button @click="activeTab = 'scanner'" :class="['w-full text-left px-6 py-4 font-medium transition-colors border-l-4', activeTab === 'scanner' ? 'bg-blue-600 text-white border-blue-400' : 'hover:bg-slate-800 border-transparent']">Live Scanner</button>
-        <button @click="activeTab = 'analytics'" :class="['w-full text-left px-6 py-4 font-medium transition-colors border-l-4', activeTab === 'analytics' ? 'bg-blue-600 text-white border-blue-400' : 'hover:bg-slate-800 border-transparent']">Analytics</button>
+      <nav class="flex-1 py-6 space-y-2 relative z-10">
+        <button @click="activeTab = 'classes'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'classes' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">👥 Sections & Students</button>
+        <button @click="activeTab = 'quizzes'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'quizzes' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📝 Quizzes & Keys</button>
+        <button @click="activeTab = 'scanner'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'scanner' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📷 Live Scanner</button>
+        <button @click="activeTab = 'analytics'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'analytics' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📊 Analytics</button>
       </nav>
-      <div class="p-4 border-t border-slate-800">
-         <div class="text-sm font-bold text-white mb-2 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500"></span> {{ authUser }}</div>
-         <button @click="logout" class="text-xs text-slate-400 hover:text-white font-medium w-full text-left transition">Sign Out</button>
+      <div class="p-6 border-t border-blue-500/20 bg-black/20 relative z-10 backdrop-blur-md">
+         <div class="text-sm font-bold text-white mb-2 flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,1)]"></span> {{ authUser }}</div>
+         <button @click="logout" class="text-xs text-blue-300 hover:text-white font-bold w-full text-left transition flex items-center gap-2">🚪 Sign Out</button>
       </div>
     </div>
 
     <!-- Mobile Topbar -->
-    <div v-if="isLoggedIn" class="md:hidden fixed top-0 left-0 right-0 bg-slate-900 text-white p-4 flex justify-between items-center z-20 print:hidden shadow-md">
-      <div class="font-bold text-lg">ScanMaster</div>
+    <div v-if="isLoggedIn" class="md:hidden fixed top-0 left-0 right-0 bg-gradient-to-r from-slate-900 to-blue-900 text-white p-4 flex justify-between items-center z-20 print:hidden shadow-lg border-b border-blue-500/20">
+      <div class="font-extrabold text-xl flex items-center gap-2">📸 ScanMaster</div>
       <div class="flex items-center gap-3">
-        <select v-model="activeTab" class="bg-slate-800 border-none outline-none text-sm p-2 rounded text-white">
-          <option value="classes">Sections</option>
-          <option value="quizzes">Quizzes</option>
-          <option value="scanner">Scanner</option>
-          <option value="analytics">Analytics</option>
+        <select v-model="activeTab" class="bg-black/30 border border-blue-500/30 outline-none text-sm p-2 rounded-lg text-white font-bold backdrop-blur-sm max-w-[120px]">
+          <option value="classes" class="text-slate-800">Sections</option>
+          <option value="quizzes" class="text-slate-800">Quizzes</option>
+          <option value="scanner" class="text-slate-800">Scanner</option>
+          <option value="analytics" class="text-slate-800">Analytics</option>
         </select>
-        <button @click="logout" class="text-xl">🚪</button>
+        <button @click="logout" class="text-2xl hover:scale-110 transition">🚪</button>
       </div>
     </div>
 
     <!-- Main Content -->
-    <div v-if="isLoggedIn" class="flex-1 overflow-auto p-4 md:p-8 pt-20 md:pt-8 relative print:p-0">
+    <div v-if="isLoggedIn" class="flex-1 overflow-hidden flex flex-col relative print:h-auto print:overflow-visible">
       
-      <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center bg-slate-50/80 z-50 print:hidden backdrop-blur-sm">
-        <div class="flex flex-col items-center gap-4 bg-white p-6 rounded-xl shadow-lg border">
-           <div class="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-           <div class="font-bold text-slate-600">Syncing Cloud Database...</div>
+      <!-- Fullscreen Loading Overlay -->
+      <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center bg-white/60 z-50 print:hidden backdrop-blur-md">
+        <div class="flex flex-col items-center gap-4 bg-white/95 p-8 rounded-3xl shadow-2xl border border-blue-100">
+           <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+           <div class="font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600 text-lg">Syncing Cloud Database...</div>
         </div>
       </div>
 
-      <!-- CLASSES TAB -->
-      <div v-show="activeTab === 'classes'" class="flex flex-col md:flex-row gap-6 h-full print:hidden">
-        
-        <!-- Sections Panel -->
-        <div class="w-full md:w-1/3 bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-full overflow-y-auto flex flex-col">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-bold">Sections</h2>
-            <button v-if="classQueue.length > 0" @click="saveClasses" :disabled="isSavingClasses" class="bg-green-600 text-white px-3 py-1 rounded text-sm font-bold shadow hover:bg-green-700 disabled:opacity-50 animate-pulse transition">
-              {{ isSavingClasses ? 'Saving...' : '💾 Save Changes' }}
-            </button>
-          </div>
-          <div class="flex gap-2 mb-6">
-            <input v-model="newClassName" @keyup.enter="addClass" type="text" placeholder="New Section Name" class="flex-1 border rounded px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
-            <button @click="addClass" class="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700">+</button>
-          </div>
-          <ul class="space-y-2 flex-1">
-            <li v-for="cls in classes" :key="cls.ClassID" @click="selectedClass = cls.ClassID" :class="['flex justify-between p-3 rounded cursor-pointer border transition', selectedClass === cls.ClassID ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50 border-transparent']">
-              <span>{{ cls.ClassName }}</span>
-              <button @click.stop="deleteClass(cls.ClassID)" class="text-red-400 hover:text-red-600">Del</button>
-            </li>
-          </ul>
-        </div>
+      <!-- Main Scrollable Area -->
+      <div class="flex-1 overflow-auto p-4 md:p-8 pt-24 md:pt-8 print:p-0">
 
-        <!-- Students Panel -->
-        <div class="w-full md:w-2/3 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-full">
-          <div v-if="selectedClass" class="h-full flex flex-col">
-             <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
-               <h2 class="text-xl font-bold">Students</h2>
-               <div class="flex items-center gap-2">
-                 <button v-if="studentQueue.length > 0" @click="saveStudents" :disabled="isSavingStudents" class="bg-green-600 text-white px-3 py-2 rounded text-sm font-bold shadow hover:bg-green-700 disabled:opacity-50 animate-pulse transition">
-                   {{ isSavingStudents ? 'Saving...' : '💾 Save Students' }}
-                 </button>
-                 <button @click="printQRs" class="bg-slate-800 text-white px-4 py-2 rounded text-sm hover:bg-slate-700 shadow flex items-center gap-2">
-                   <span>🖨️</span> Print QR Cards
-                 </button>
-               </div>
-             </div>
-
-             <!-- Single Upload -->
-             <div class="flex gap-2 mb-4">
-                 <input v-model="newStudentName" @keyup.enter="addStudent" placeholder="Single Student Name" class="flex-1 border rounded p-2 outline-none focus:ring-2 focus:ring-blue-500">
-                 <button @click="addStudent" class="bg-blue-600 text-white px-4 rounded font-bold hover:bg-blue-700">Add</button>
-             </div>
-
-             <!-- Bulk Upload -->
-             <div class="mb-4 p-3 bg-slate-50 border rounded-lg">
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Bulk Upload (One name per line)</label>
-                <textarea v-model="bulkStudentText" rows="2" placeholder="Paste a list of names here to automatically enroll them in sequence..." class="w-full border rounded p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
-                <button @click="bulkAddStudents" class="mt-2 w-full bg-slate-800 text-white px-4 py-2 rounded text-sm font-bold hover:bg-slate-700 transition">Bulk Add Learners</button>
-             </div>
-
-             <div class="overflow-y-auto border rounded flex-1">
-               <table class="w-full text-left text-sm relative">
-                 <thead class="bg-slate-100 sticky top-0 z-10 shadow-sm">
-                   <tr><th class="p-3 w-16 text-center">Roster #</th><th class="p-3">Name</th><th class="p-3 w-20">Action</th></tr>
-                 </thead>
-                 <tbody>
-                   <tr v-for="stu in currentStudents" :key="stu.StudentID" class="border-b">
-                     <td class="p-3 font-bold text-slate-500 text-center">{{ stu.RosterNumber }}</td>
-                     <td class="p-3">{{ stu.StudentName }}</td>
-                     <td class="p-3"><button @click="deleteStudent(stu.StudentID)" class="text-red-400 hover:underline">Remove</button></td>
-                   </tr>
-                 </tbody>
-               </table>
-             </div>
-          </div>
-          <div v-else class="flex-1 flex items-center justify-center text-slate-400">Select a section to manage students</div>
-        </div>
-      </div>
-
-      <!-- QUIZZES TAB -->
-      <div v-show="activeTab === 'quizzes'" class="flex flex-col md:flex-row gap-6 h-full print:hidden">
-        
-        <!-- Quizzes Panel -->
-        <div class="w-full md:w-1/3 bg-white p-6 rounded-xl shadow border border-slate-200 h-full overflow-y-auto flex flex-col">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-bold">Quizzes</h2>
-            <button v-if="quizQueue.length > 0" @click="saveQuizzes" :disabled="isSavingQuizzes" class="bg-green-600 text-white px-3 py-1 rounded text-sm font-bold shadow hover:bg-green-700 disabled:opacity-50 animate-pulse transition">
-              {{ isSavingQuizzes ? 'Saving...' : '💾 Save Quizzes' }}
-            </button>
-          </div>
-          <div class="flex gap-2 mb-6">
-            <input v-model="newQuizName" @keyup.enter="addQuiz" type="text" placeholder="New Quiz Name" class="flex-1 border rounded px-3 outline-none focus:ring-2 focus:ring-blue-500">
-            <button @click="addQuiz" class="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700">+</button>
-          </div>
-          <ul class="space-y-2 flex-1">
-            <li v-for="q in quizzes" :key="q.QuizID" @click="selectedQuiz = q.QuizID" :class="['flex justify-between p-3 rounded cursor-pointer border transition', selectedQuiz === q.QuizID ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50 border-transparent']">
-              <span class="truncate pr-2 font-medium">{{ q.QuizName || 'Untitled Quiz' }}</span>
-              <button @click.stop="deleteQuiz(q.QuizID)" class="text-red-400 hover:text-red-600 px-2">Del</button>
-            </li>
-          </ul>
-        </div>
-
-        <!-- Answer Key Panel -->
-        <div class="w-full md:w-2/3 bg-white p-6 rounded-xl shadow border flex flex-col h-full">
-          <div v-if="selectedQuizData" class="flex flex-col h-full">
-            
-            <!-- Flexible Editable Quiz Header -->
-            <div class="flex flex-col sm:flex-row justify-between sm:items-start mb-6 gap-4 border-b pb-4">
-              <div class="flex-1 w-full relative group">
-                <label class="text-xs font-bold text-slate-400 uppercase tracking-wide">Quiz Title (Click to Edit)</label>
-                <input 
-                   v-model="selectedQuizData.QuizName" 
-                   @input="markKeyUnsaved" 
-                   class="text-2xl font-bold bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-blue-600 outline-none w-full py-1 text-slate-800 transition placeholder:text-slate-300" 
-                   placeholder="Enter a title for this quiz..."
-                >
-              </div>
-              <div class="flex gap-2 shrink-0 mt-4 sm:mt-0">
-                <button v-if="hasUnsavedKey" @click="saveQuizKey" :disabled="isSavingKey" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold shadow hover:bg-green-700 disabled:opacity-50 animate-pulse transition">
-                  {{ isSavingKey ? 'Saving...' : '💾 Save Quiz' }}
+        <!-- CLASSES TAB -->
+        <div v-show="activeTab === 'classes'" class="flex flex-col h-full print:hidden">
+          <div class="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+            <!-- Sections Panel -->
+            <div class="w-full lg:w-1/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white h-full overflow-hidden flex flex-col">
+              <div class="flex flex-wrap justify-between items-center mb-6 gap-2">
+                <h2 class="text-2xl font-extrabold text-slate-800">Sections</h2>
+                <button v-if="classQueue.length > 0" @click="saveClasses" :disabled="isSavingClasses" class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 animate-pulse transition">
+                  {{ isSavingClasses ? 'Saving...' : '💾 Save' }}
                 </button>
-                <button @click="addQuestion" class="bg-blue-100 text-blue-700 px-4 py-2 rounded text-sm font-bold hover:bg-blue-200 transition shadow-sm">+ Add Item</button>
+              </div>
+              <div class="flex flex-wrap md:flex-nowrap gap-2 mb-6">
+                <input v-model="newClassName" @keyup.enter="addClass" type="text" placeholder="New Section Name" class="flex-1 w-full border-none shadow-inner bg-slate-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 transition font-medium text-slate-700">
+                <button @click="addClass" class="bg-gradient-to-br from-blue-600 to-cyan-500 text-white px-5 py-3 rounded-xl font-bold hover:shadow-lg transform hover:-translate-y-0.5 transition-all text-xl w-full md:w-auto shrink-0">+</button>
+              </div>
+              <ul class="space-y-3 flex-1 overflow-y-auto pr-2">
+                <li v-for="cls in classes" :key="cls.ClassID" @click="selectedClass = cls.ClassID" :class="['flex justify-between items-center p-4 rounded-2xl cursor-pointer border-2 transition-all font-bold', selectedClass === cls.ClassID ? 'bg-blue-50 border-blue-400 text-blue-900 shadow-md transform scale-[1.02]' : 'bg-white border-transparent hover:border-blue-200 text-slate-600 shadow-sm']">
+                  <span class="truncate pr-2">{{ cls.ClassName }}</span>
+                  <button @click.stop="deleteClass(cls.ClassID)" class="text-rose-400 hover:text-white hover:bg-rose-500 w-8 h-8 rounded-full flex shrink-0 items-center justify-center transition-colors">&times;</button>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Students Panel -->
+            <div class="w-full lg:w-2/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white flex flex-col h-full overflow-hidden">
+              <div v-if="selectedClass" class="h-full flex flex-col">
+                 <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4 border-b border-slate-200 pb-4">
+                   <h2 class="text-2xl font-extrabold text-slate-800">Learners</h2>
+                   <div class="flex flex-wrap items-center gap-3">
+                     <button v-if="studentQueue.length > 0" @click="saveStudents" :disabled="isSavingStudents" class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 animate-pulse transition">
+                       {{ isSavingStudents ? 'Saving...' : '💾 Save Students' }}
+                     </button>
+                     <button @click="printQRs" class="bg-slate-800 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-slate-700 shadow-lg flex items-center gap-2 transform hover:-translate-y-0.5 transition-all">
+                       <span>🖨️</span> Print QR Cards
+                     </button>
+                   </div>
+                 </div>
+
+                 <!-- Add Student Controls -->
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                   <!-- Single Upload -->
+                   <div class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 shadow-sm flex flex-col">
+                     <label class="block text-xs font-black text-blue-500 uppercase tracking-wider mb-2">Single Add</label>
+                     <div class="flex flex-wrap gap-2 mt-auto">
+                       <input v-model="newStudentName" @keyup.enter="addStudent" placeholder="Student Name" class="flex-1 w-full min-w-[120px] border-none shadow-inner bg-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700 text-sm">
+                       <button @click="addStudent" class="bg-gradient-to-br from-blue-600 to-cyan-500 text-white px-4 py-2 rounded-xl font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all w-full sm:w-auto shrink-0">Add</button>
+                     </div>
+                   </div>
+
+                   <!-- Bulk Upload -->
+                   <div class="bg-cyan-50/50 p-4 rounded-2xl border border-cyan-100 shadow-sm flex flex-col">
+                      <label class="block text-xs font-black text-cyan-600 uppercase tracking-wider mb-2">Bulk Enroll (Sequence)</label>
+                      <textarea v-model="bulkStudentText" rows="2" placeholder="Paste names (one per line)..." class="w-full border-none shadow-inner bg-white rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-cyan-500 resize-none font-medium text-slate-700"></textarea>
+                      <button @click="bulkAddStudents" class="mt-2 w-full bg-slate-800 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 hover:bg-slate-700 transition-all">Process Bulk List</button>
+                   </div>
+                 </div>
+
+                 <div class="overflow-hidden bg-white rounded-2xl border border-slate-100 shadow-inner flex-1 flex flex-col">
+                   <div class="overflow-x-auto flex-1">
+                     <table class="w-full text-left text-sm relative whitespace-nowrap">
+                       <thead class="bg-slate-100/80 sticky top-0 z-10 backdrop-blur-sm">
+                         <tr>
+                           <th class="p-4 w-20 text-center font-black text-slate-400 uppercase tracking-wider">Roster</th>
+                           <th class="p-4 font-black text-slate-400 uppercase tracking-wider">Student Name</th>
+                           <th class="p-4 w-24 text-center font-black text-slate-400 uppercase tracking-wider">Action</th>
+                         </tr>
+                       </thead>
+                       <tbody>
+                         <tr v-for="stu in currentStudents" :key="stu.StudentID" class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                           <td class="p-4 font-black text-blue-500 text-center text-lg">#{{ stu.RosterNumber }}</td>
+                           <td class="p-4 font-bold text-slate-700 text-base">{{ stu.StudentName }}</td>
+                           <td class="p-4 text-center">
+                             <button @click="deleteStudent(stu.StudentID)" class="text-rose-400 hover:text-white hover:bg-rose-500 px-3 py-1 rounded-lg font-bold transition-colors">Del</button>
+                           </td>
+                         </tr>
+                         <tr v-if="currentStudents.length === 0">
+                           <td colspan="3" class="p-10 text-center text-slate-400 font-medium text-lg">No learners enrolled yet.</td>
+                         </tr>
+                       </tbody>
+                     </table>
+                   </div>
+                 </div>
+              </div>
+              <div v-else class="flex-1 flex flex-col items-center justify-center text-slate-400 opacity-60">
+                 <div class="text-6xl mb-4">👈</div>
+                 <div class="text-xl font-bold text-center">Select a section to manage learners</div>
               </div>
             </div>
+          </div>
+          <!-- Powered by PVNJ Footer -->
+          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Powered by: PVNJ</div>
+        </div>
 
-            <!-- Question Editor Header -->
-            <div class="flex text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 px-2">
-                <div class="w-24 pl-2">Item Label</div>
-                <div class="flex-1 px-4">Correct Answer</div>
-                <div class="w-8"></div>
+        <!-- QUIZZES TAB -->
+        <div v-show="activeTab === 'quizzes'" class="flex flex-col h-full print:hidden">
+          <div class="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+            <!-- Quizzes Panel -->
+            <div class="w-full lg:w-1/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white h-full overflow-hidden flex flex-col">
+              <div class="flex flex-wrap justify-between items-center mb-6 gap-2">
+                <h2 class="text-2xl font-extrabold text-slate-800">Quizzes</h2>
+                <button v-if="quizQueue.length > 0" @click="saveQuizzes" :disabled="isSavingQuizzes" class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 animate-pulse transition">
+                  {{ isSavingQuizzes ? 'Saving...' : '💾 Save Quizzes' }}
+                </button>
+              </div>
+              <div class="flex flex-wrap md:flex-nowrap gap-2 mb-6">
+                <input v-model="newQuizName" @keyup.enter="addQuiz" type="text" placeholder="New Quiz Name" class="flex-1 w-full border-none shadow-inner bg-slate-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 transition font-medium text-slate-700">
+                <button @click="addQuiz" class="bg-gradient-to-br from-blue-600 to-cyan-500 text-white px-5 py-3 rounded-xl font-bold hover:shadow-lg transform hover:-translate-y-0.5 transition-all text-xl w-full md:w-auto shrink-0">+</button>
+              </div>
+              <ul class="space-y-3 flex-1 overflow-y-auto pr-2">
+                <li v-for="q in quizzes" :key="q.QuizID" @click="selectedQuiz = q.QuizID" :class="['flex justify-between items-center p-4 rounded-2xl cursor-pointer border-2 transition-all font-bold', selectedQuiz === q.QuizID ? 'bg-blue-50 border-blue-400 text-blue-900 shadow-md transform scale-[1.02]' : 'bg-white border-transparent hover:border-blue-200 text-slate-600 shadow-sm']">
+                  <span class="truncate pr-2">{{ q.QuizName || 'Untitled Quiz' }}</span>
+                  <button @click.stop="deleteQuiz(q.QuizID)" class="text-rose-400 hover:text-white hover:bg-rose-500 w-8 h-8 rounded-full flex shrink-0 items-center justify-center transition-colors">&times;</button>
+                </li>
+              </ul>
             </div>
 
-            <!-- Flexible Syntax Questions List -->
-            <div class="flex-1 overflow-y-auto space-y-3 pr-2 pb-4">
-              <div v-for="(q, idx) in selectedQuizData.Questions" :key="q.id" class="flex items-center gap-4 bg-slate-50 p-3 rounded-lg border shadow-sm hover:border-blue-300 transition">
-                <!-- Flexible Syntax / Question Label (Defaults to Next Number) -->
-                <input v-model="q.text" @input="markKeyUnsaved" class="w-24 font-bold text-slate-700 border p-2 rounded outline-none focus:ring-2 focus:ring-blue-400 text-center bg-white shadow-inner" placeholder="e.g. 1a">
+            <!-- Answer Key Panel -->
+            <div class="w-full lg:w-2/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white flex flex-col h-full overflow-hidden">
+              <div v-if="selectedQuizData" class="flex flex-col h-full">
                 
-                <select v-model="q.answer" @change="markKeyUnsaved" class="flex-1 border p-2 rounded font-bold text-blue-600 bg-white outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer shadow-sm">
-                  <option value="A">Option A</option><option value="B">Option B</option><option value="C">Option C</option><option value="D">Option D</option>
-                </select>
-                
-                <button @click="removeQuestion(idx)" class="text-red-400 font-bold hover:text-red-600 p-2 text-xl" title="Remove Item">&times;</button>
-              </div>
-              <div v-if="selectedQuizData.Questions.length === 0" class="text-center text-slate-400 mt-10">Click "+ Add Item" to build your answer key.</div>
-            </div>
-          </div>
-          <div v-else class="flex-1 flex items-center justify-center text-slate-400">Select a quiz to edit its answer key</div>
-        </div>
-      </div>
-
-      <!-- SCANNER TAB -->
-      <div v-show="activeTab === 'scanner'" class="h-full flex flex-col print:hidden">
-        <div v-if="!activeSessionId" class="max-w-xl w-full mx-auto mt-10 bg-white p-8 rounded-xl shadow border">
-          <h2 class="text-2xl font-bold mb-6 text-center">Launch Scanner</h2>
-          
-          <div class="space-y-6">
-            <!-- Camera Warning -->
-            <div v-if="cameraBlocked" class="p-5 bg-amber-50 text-amber-900 border border-amber-300 rounded-lg shadow-sm mb-6">
-               <h3 class="font-bold text-lg text-amber-800 mb-2">📸 Camera Permission Denied</h3>
-               <p class="text-sm">Your browser blocked camera access. Please click the camera icon in your URL bar to allow access, then refresh the page.</p>
-            </div>
-
-            <div>
-              <label class="block text-sm font-bold mb-2">Select Section</label>
-              <select v-model="scanClass" class="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 cursor-pointer">
-                <option value="">-- Choose Section --</option>
-                <option v-for="c in classes" :value="c.ClassID">{{ c.ClassName }}</option>
-              </select>
-            </div>
-            
-            <div>
-              <label class="block text-sm font-bold mb-2 mt-4">Select Quiz</label>
-              <select v-model="scanQuiz" class="w-full border p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 cursor-pointer">
-                <option value="">-- Choose Quiz --</option>
-                <option v-for="q in quizzes" :value="q.QuizID">{{ q.QuizName }}</option>
-              </select>
-            </div>
-
-            <button @click="startSession" :disabled="!scanClass || !scanQuiz" class="w-full bg-blue-600 text-white py-4 rounded font-bold disabled:opacity-50 transition shadow-lg mt-6">Start Live Projection</button>
-          </div>
-        </div>
-
-        <div v-else class="flex flex-col lg:flex-row gap-6 h-full">
-          <!-- Camera Feed -->
-          <div class="w-full lg:w-1/2 bg-black rounded-xl overflow-hidden shadow-xl relative flex flex-col border border-slate-700">
-            <div class="bg-slate-900 text-white p-4 flex justify-between items-center z-10 border-b border-slate-800">
-              <button @click="qIndex = Math.max(0, qIndex-1)" :disabled="qIndex === 0" class="bg-slate-700 px-4 py-2 rounded font-bold hover:bg-slate-600 disabled:opacity-30 transition">Previous</button>
-              <div class="text-center">
-                <!-- Uses flexible syntax item label -->
-                <div class="font-bold text-lg">Item: {{ activeQuizData.Questions[qIndex]?.text || (qIndex + 1) }}</div>
-                <div class="text-sm text-slate-400">Key: <span class="text-green-400 text-xl font-bold ml-1">{{ activeQuestionKey || '?' }}</span></div>
-              </div>
-              <button @click="qIndex = Math.min(activeQuizData.Questions.length-1, qIndex+1)" :disabled="qIndex === activeQuizData.Questions.length - 1" class="bg-slate-700 px-4 py-2 rounded font-bold hover:bg-slate-600 disabled:opacity-30 transition">Next</button>
-            </div>
-            
-            <div class="flex-1 relative bg-black flex items-center justify-center min-h-[300px] md:min-h-[400px]">
-               <video ref="video" class="absolute inset-0 w-full h-full object-cover opacity-0 z-0" playsinline muted></video>
-               <canvas ref="canvas" class="absolute inset-0 w-full h-full object-cover z-10"></canvas>
-               <!-- Scanner Targeting Frame overlay (Shows when actively capturing) -->
-               <div v-if="isCapturing" class="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
-                  <div class="w-64 h-64 border-2 border-white/30 rounded-3xl relative">
-                     <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white/80 rounded-tl-xl"></div>
-                     <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white/80 rounded-tr-xl"></div>
-                     <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white/80 rounded-bl-xl"></div>
-                     <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white/80 rounded-br-xl"></div>
+                <!-- Flexible Editable Quiz Header -->
+                <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4 border-b border-slate-200 pb-4">
+                  <div class="flex-1 w-full group">
+                    <label class="block text-xs font-black text-blue-500 uppercase tracking-wider mb-1">Quiz Title (Click to Edit)</label>
+                    <input 
+                       v-model="selectedQuizData.QuizName" 
+                       @input="markKeyUnsaved" 
+                       class="text-2xl md:text-3xl font-extrabold bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-blue-500 outline-none w-full py-1 text-slate-800 transition placeholder:text-slate-300" 
+                       placeholder="Enter a title for this quiz..."
+                    >
                   </div>
-               </div>
-               <!-- Overlay message when paused -->
-               <div v-if="!isCapturing" class="absolute inset-0 z-20 pointer-events-none flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                  <div class="text-white font-bold text-xl flex flex-col items-center gap-2">
-                     <span class="text-4xl">⏸</span>
-                     Camera Paused
+                  <div class="flex flex-wrap gap-3 shrink-0 mt-2 md:mt-0">
+                    <button v-if="hasUnsavedKey" @click="saveQuizKey" :disabled="isSavingKey" class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 animate-pulse transition">
+                      {{ isSavingKey ? 'Saving...' : '💾 Save Key' }}
+                    </button>
+                    <button @click="addQuestion" class="bg-blue-100 text-blue-800 px-5 py-2.5 rounded-xl text-sm font-black hover:bg-blue-200 hover:shadow-md transform hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                      <span class="text-lg">+</span> Add Item
+                    </button>
                   </div>
-               </div>
-            </div>
+                </div>
 
-            <!-- Enhanced Capture & Control Buttons -->
-            <div class="bg-slate-900 p-4 z-10 text-center border-t border-slate-800 flex flex-wrap justify-center gap-3">
-               <button @click="isCapturing = !isCapturing" :class="isCapturing ? 'bg-amber-500 hover:bg-amber-600 text-slate-900' : 'bg-green-600 hover:bg-green-700 text-white'" class="px-6 py-3 rounded font-bold transition shadow flex-1 md:flex-none flex justify-center items-center gap-2">
-                  <span v-if="!isCapturing">▶️ Start Capturing</span>
-                  <span v-else>⏸ Pause Capturing</span>
-               </button>
-               <button @click="restartTest" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded font-bold transition shadow flex-1 md:flex-none flex justify-center items-center gap-2">
-                  🔄 Restart Test
-               </button>
-               <button @click="confirmExitSession" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded font-bold transition shadow flex-1 md:flex-none flex justify-center items-center gap-2">
-                  ⏹ Exit Quiz
-               </button>
-            </div>
-          </div>
+                <!-- Question Editor Header -->
+                <div class="flex text-xs font-black text-slate-400 uppercase tracking-wider mb-3 px-2">
+                    <div class="w-20 md:w-24 pl-2 text-center">Item #</div>
+                    <div class="flex-1 px-2 md:px-4">Correct Answer</div>
+                    <div class="w-16 md:w-20"></div>
+                </div>
 
-          <!-- Live Projection Box -->
-          <div class="w-full lg:w-1/2 bg-white rounded-xl shadow-md border flex flex-col overflow-hidden">
-            <div class="bg-slate-800 text-white p-4 font-bold flex justify-between items-center shadow-md z-10">
-              <span class="flex items-center gap-2">
-                 <span class="w-2 h-2 rounded-full animate-pulse" :class="isCapturing ? 'bg-green-400' : 'bg-amber-500'"></span> 
-                 Live Projection
-                 <button @click="openProjectionWindow" class="ml-2 text-slate-400 hover:text-white transition bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-xs flex items-center gap-1 shadow-sm border border-slate-600" title="Pop out to a new external window for projectors">
-                   🪟 Pop Out
-                 </button>
-              </span>
-              <span class="text-sm bg-slate-700 px-3 py-1 rounded-full">Item {{ activeQuizData.Questions[qIndex]?.text || (qIndex + 1) }} / {{ activeQuizData.Questions.length }}</span>
-            </div>
-            <div class="flex-1 p-4 overflow-y-auto bg-slate-50 grid grid-cols-2 md:grid-cols-3 gap-3 content-start">
-               <div v-for="s in currentScanStudents" :key="s.StudentID" 
-                    :class="['p-3 rounded-lg border-2 flex justify-between items-center transition-all duration-300',
-                      getStudentResult(s.StudentID) === null ? 'bg-white border-slate-200 text-slate-500' :
-                      getStudentResult(s.StudentID).isCorrect ? 'bg-green-100 border-green-500 text-green-800 font-bold shadow-sm' :
-                      'bg-red-100 border-red-500 text-red-800 font-bold shadow-sm'
-                    ]">
-                 <span class="truncate pr-2">{{ s.RosterNumber }}. {{ s.StudentName.split(' ')[0] }}</span>
-                 <span v-if="getStudentResult(s.StudentID)" class="bg-white px-2 py-0.5 rounded border text-sm">{{ getStudentResult(s.StudentID).answer }}</span>
-               </div>
-            </div>
-          </div>
-        </div>
-      </div>
+                <!-- Flexible Syntax Questions List with Expandable Editor -->
+                <div class="flex-1 overflow-y-auto space-y-4 pr-1 md:pr-2 pb-4">
+                  <div v-for="(q, idx) in selectedQuizData.Questions" :key="q.id" class="flex flex-col bg-white p-3 md:p-4 rounded-2xl border-2 border-slate-100 shadow-sm hover:border-blue-300 hover:shadow-md transition-all duration-300">
+                    <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 md:gap-4">
+                      <!-- Flexible Syntax / Question Label -->
+                      <input v-model="q.text" @input="markKeyUnsaved" class="w-16 md:w-24 font-black text-slate-700 border-none bg-slate-100 p-2 md:p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-center shadow-inner text-base md:text-lg" placeholder="1a">
+                      
+                      <select v-model="q.answer" @change="markKeyUnsaved" class="flex-1 border-none shadow-inner p-2 md:p-3 rounded-xl font-black text-blue-700 bg-slate-100 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-base md:text-lg min-w-[100px]">
+                        <option value="A">Opt A</option><option value="B">Opt B</option><option value="C">Opt C</option><option value="D">Opt D</option>
+                      </select>
+                      
+                      <button @click="q.showDetails = !q.showDetails" :class="q.showDetails ? 'bg-cyan-100 text-cyan-700' : 'text-slate-400 hover:bg-slate-100 hover:text-cyan-600'" class="p-2 md:p-3 rounded-xl text-base md:text-lg transition-colors font-bold shadow-sm shrink-0" title="Encode Question Content">📝</button>
+                      <button @click="removeQuestion(idx)" class="text-rose-400 font-bold hover:text-white hover:bg-rose-500 w-10 h-10 rounded-xl flex items-center justify-center transition-colors text-xl shrink-0" title="Remove Item">&times;</button>
+                    </div>
 
-      <!-- ANALYTICS TAB -->
-      <div v-show="activeTab === 'analytics'" class="h-full flex flex-col print:hidden">
-        <div class="bg-white p-6 rounded-xl shadow border mb-6">
-          <h2 class="text-xl font-bold mb-4">Analytics</h2>
-          <select v-model="analyticsSession" class="w-full md:w-1/2 border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50 cursor-pointer">
-             <option value="">-- Choose Completed Session --</option>
-             <option v-for="sess in uniqueSessions" :value="sess.SessionID">{{ sess.DateStr }} - {{ getClassName(sess.ClassID) }} - {{ getQuizName(sess.QuizID) }}</option>
-          </select>
-        </div>
-
-        <div v-if="analyticsStats" class="flex-1 overflow-y-auto space-y-6 pb-10">
-           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-             <div class="bg-white p-6 rounded-xl border text-center shadow-sm">
-               <div class="text-slate-500 font-medium mb-1">Mean Score</div>
-               <div class="text-4xl font-bold text-slate-800">{{ analyticsStats.mean }}</div>
-             </div>
-             <div class="bg-white p-6 rounded-xl border text-center shadow-sm">
-               <div class="text-slate-500 font-medium mb-1">Standard Deviation</div>
-               <div class="text-4xl font-bold text-slate-800">{{ analyticsStats.sd }}</div>
-             </div>
-             <div class="bg-white p-6 rounded-xl border text-center shadow-sm">
-               <div class="text-slate-500 font-medium mb-1">Participation</div>
-               <div class="text-4xl font-bold text-slate-800">{{ analyticsStats.scores.length }} <span class="text-sm font-normal text-slate-400">students</span></div>
-             </div>
-           </div>
-
-           <div class="bg-white p-6 rounded-xl border shadow-sm">
-             <h3 class="font-bold text-lg mb-4">Item Analysis (Scanned Responses)</h3>
-             <div class="overflow-x-auto">
-               <table class="w-full text-left text-sm">
-                 <thead class="bg-slate-100">
-                   <!-- Changed headers to reflect raw count of Responses -->
-                   <tr><th class="p-3 w-20">Item Label</th><th class="p-3 w-16">Key</th><th class="p-3">Correct %</th><th class="p-3 text-center">Resp A</th><th class="p-3 text-center">Resp B</th><th class="p-3 text-center">Resp C</th><th class="p-3 text-center">Resp D</th></tr>
-                 </thead>
-                 <tbody>
-                   <tr v-for="(item, i) in analyticsStats.itemAnalysis" class="border-b hover:bg-slate-50 transition">
-                     <td class="p-3 font-bold text-slate-600">{{ item.label }}</td>
-                     <td class="p-3 text-green-600 font-bold bg-green-50 text-center rounded">{{ item.key }}</td>
-                     <td class="p-3 font-bold">
-                       <div class="flex items-center gap-2">
-                         <div class="w-24 h-2.5 bg-slate-200 rounded-full overflow-hidden">
-                           <div :class="['h-full rounded-full', item.diff >= 70 ? 'bg-green-500' : item.diff >= 40 ? 'bg-yellow-500' : 'bg-red-500']" :style="'width:' + item.diff + '%'"></div>
-                         </div>
-                         <span>{{ item.diff }}%</span>
+                    <!-- Expanded Content Editor (Optional encoding) -->
+                    <div v-if="q.showDetails" class="mt-4 pt-4 border-t-2 border-dashed border-slate-200 grid gap-3 animate-fade-in">
+                       <textarea v-model="q.qText" @input="markKeyUnsaved" placeholder="Type the actual question here (Optional)..." class="w-full border-none bg-blue-50/50 shadow-inner p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium text-slate-800" rows="2"></textarea>
+                       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm font-medium">
+                         <div class="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-100 shadow-sm focus-within:ring-2 focus-within:ring-yellow-400"><span class="inline-flex justify-center items-center w-8 h-8 rounded-lg bg-yellow-100 text-yellow-700 font-black">A</span><input v-model="q.optA" @input="markKeyUnsaved" placeholder="Choice A" class="flex-1 border-none bg-transparent outline-none text-slate-700 w-full min-w-0"></div>
+                         <div class="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-100 shadow-sm focus-within:ring-2 focus-within:ring-blue-400"><span class="inline-flex justify-center items-center w-8 h-8 rounded-lg bg-blue-100 text-blue-700 font-black">B</span><input v-model="q.optB" @input="markKeyUnsaved" placeholder="Choice B" class="flex-1 border-none bg-transparent outline-none text-slate-700 w-full min-w-0"></div>
+                         <div class="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-100 shadow-sm focus-within:ring-2 focus-within:ring-green-400"><span class="inline-flex justify-center items-center w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 font-black">C</span><input v-model="q.optC" @input="markKeyUnsaved" placeholder="Choice C" class="flex-1 border-none bg-transparent outline-none text-slate-700 w-full min-w-0"></div>
+                         <div class="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-100 shadow-sm focus-within:ring-2 focus-within:ring-red-400"><span class="inline-flex justify-center items-center w-8 h-8 rounded-lg bg-rose-100 text-rose-700 font-black">D</span><input v-model="q.optD" @input="markKeyUnsaved" placeholder="Choice D" class="flex-1 border-none bg-transparent outline-none text-slate-700 w-full min-w-0"></div>
                        </div>
-                     </td>
-                     <!-- Shows raw response counts from learners -->
-                     <td class="p-3 text-slate-500 text-center font-mono font-bold">{{ item.A }}</td>
-                     <td class="p-3 text-slate-500 text-center font-mono font-bold">{{ item.B }}</td>
-                     <td class="p-3 text-slate-500 text-center font-mono font-bold">{{ item.C }}</td>
-                     <td class="p-3 text-slate-500 text-center font-mono font-bold">{{ item.D }}</td>
-                   </tr>
-                 </tbody>
-               </table>
-             </div>
-           </div>
+                    </div>
+                  </div>
+                  <div v-if="selectedQuizData.Questions.length === 0" class="text-center text-slate-400 mt-16 font-bold text-lg">Your key is empty. Click "+ Add Item" to begin.</div>
+                </div>
+              </div>
+              <div v-else class="flex-1 flex flex-col items-center justify-center text-slate-400 opacity-60">
+                 <div class="text-6xl mb-4">👈</div>
+                 <div class="text-xl font-bold text-center">Select a quiz to edit its answer key</div>
+              </div>
+            </div>
+          </div>
+          <!-- Powered by PVNJ Footer -->
+          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Powered by: PVNJ</div>
         </div>
-        <div v-else-if="analyticsSession" class="flex-1 flex items-center justify-center text-slate-400">
-           No data available for this session.
+
+        <!-- SCANNER TAB -->
+        <div v-show="activeTab === 'scanner'" class="flex flex-col h-full print:hidden">
+          <div class="flex-1 min-h-0 flex flex-col">
+            <div v-if="!activeSessionId" class="max-w-xl w-full mx-auto mt-4 md:mt-10 bg-white/90 backdrop-blur-xl p-6 md:p-8 rounded-[2rem] shadow-2xl border border-white shrink-0">
+              <div class="flex justify-center mb-6">
+                 <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-full flex items-center justify-center text-3xl shadow-lg shadow-cyan-500/40 text-white">📸</div>
+              </div>
+              <h2 class="text-3xl font-extrabold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-800 to-cyan-600">Launch Scanner</h2>
+              
+              <div class="space-y-6">
+                <!-- Camera Warning -->
+                <div v-if="cameraBlocked" class="p-5 bg-rose-50 text-rose-900 border-2 border-rose-200 rounded-2xl shadow-sm mb-6">
+                   <h3 class="font-bold text-lg text-rose-800 mb-2 flex items-center gap-2"><span>⚠️</span> Camera Denied</h3>
+                   <p class="text-sm font-medium">Your browser blocked camera access. Please click the camera icon in your URL bar to allow access, then refresh the page.</p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-black text-slate-500 uppercase tracking-wider mb-2 pl-1">Select Section</label>
+                  <select v-model="scanClass" class="w-full border-none shadow-inner bg-slate-100 p-4 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-bold text-slate-700 text-lg">
+                    <option value="" disabled>-- Choose Section --</option>
+                    <option v-for="c in classes" :value="c.ClassID">{{ c.ClassName }}</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-black text-slate-500 uppercase tracking-wider mb-2 mt-4 pl-1">Select Quiz</label>
+                  <select v-model="scanQuiz" class="w-full border-none shadow-inner bg-slate-100 p-4 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-bold text-slate-700 text-lg">
+                    <option value="" disabled>-- Choose Quiz --</option>
+                    <option v-for="q in quizzes" :value="q.QuizID">{{ q.QuizName }}</option>
+                  </select>
+                </div>
+
+                <button @click="startSession" :disabled="!scanClass || !scanQuiz" class="w-full mt-8 bg-gradient-to-r from-blue-600 to-cyan-500 text-white py-4 rounded-xl font-extrabold text-lg disabled:opacity-50 transition-all shadow-xl shadow-cyan-500/30 transform hover:-translate-y-1 hover:from-blue-700 hover:to-cyan-600">Launch Live Projection</button>
+              </div>
+            </div>
+
+            <div v-else class="flex flex-col lg:flex-row gap-6 h-full overflow-hidden">
+              <!-- Camera Feed Side -->
+              <div class="w-full lg:w-1/2 bg-slate-900 rounded-[2rem] overflow-hidden shadow-2xl relative flex flex-col border-4 border-slate-800">
+                
+                <div class="bg-slate-900/90 backdrop-blur-md text-white p-4 md:p-5 flex justify-between items-center z-10 border-b border-slate-800/50 relative">
+                  <button @click="qIndex = Math.max(0, qIndex-1)" :disabled="qIndex === 0" class="bg-slate-800 px-4 md:px-5 py-2 md:py-3 rounded-xl font-bold hover:bg-slate-700 disabled:opacity-30 transition shadow-inner">Prev</button>
+                  <div class="text-center">
+                    <div class="font-extrabold text-xl md:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">Item {{ activeQuizData.Questions[qIndex]?.text || (qIndex + 1) }}</div>
+                    <div class="text-xs md:text-sm font-medium text-slate-400 mt-1 bg-slate-800 inline-block px-3 py-1 rounded-full border border-slate-700">Key: <span class="text-emerald-400 text-lg md:text-xl font-black ml-1">{{ activeQuestionKey || '?' }}</span></div>
+                  </div>
+                  <button @click="qIndex = Math.min(activeQuizData.Questions.length-1, qIndex+1)" :disabled="qIndex === activeQuizData.Questions.length - 1" class="bg-slate-800 px-4 md:px-5 py-2 md:py-3 rounded-xl font-bold hover:bg-slate-700 disabled:opacity-30 transition shadow-inner">Next</button>
+                </div>
+                
+                <div class="flex-1 relative bg-black flex items-center justify-center min-h-[300px] md:min-h-[400px]">
+                   <video ref="video" class="absolute inset-0 w-full h-full object-cover opacity-0 z-0" playsinline muted></video>
+                   <canvas ref="canvas" class="absolute inset-0 w-full h-full object-cover z-10"></canvas>
+                   
+                   <!-- Scanner Targeting Frame overlay -->
+                   <div v-if="isCapturing" class="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
+                      <div class="w-48 h-48 md:w-64 md:h-64 border border-white/20 rounded-[2rem] relative shadow-[0_0_50px_rgba(56,189,248,0.2)]">
+                         <div class="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-cyan-400 rounded-tl-2xl"></div>
+                         <div class="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-cyan-400 rounded-tr-2xl"></div>
+                         <div class="absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 border-cyan-400 rounded-bl-2xl"></div>
+                         <div class="absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 border-cyan-400 rounded-br-2xl"></div>
+                      </div>
+                   </div>
+
+                   <!-- Overlay message when paused -->
+                   <div v-if="!isCapturing" class="absolute inset-0 z-20 pointer-events-none flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
+                      <div class="text-white font-bold text-xl md:text-2xl flex flex-col items-center gap-4 bg-slate-800/80 p-6 md:p-8 rounded-3xl border border-slate-700 shadow-2xl">
+                         <span class="text-4xl md:text-5xl">⏸</span>
+                         Scanner Paused
+                      </div>
+                   </div>
+                </div>
+
+                <!-- Enhanced Capture & Control Buttons -->
+                <div class="bg-slate-900/90 backdrop-blur-md p-4 md:p-5 z-10 text-center border-t border-slate-800/50 flex flex-wrap justify-center gap-2 md:gap-3 relative">
+                   <button @click="isCapturing = !isCapturing" :class="isCapturing ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 hover:from-amber-500 hover:to-orange-600' : 'bg-gradient-to-r from-emerald-400 to-green-500 text-white hover:from-emerald-500 hover:to-green-600'" class="px-4 md:px-6 py-3 md:py-4 rounded-xl font-extrabold transition-all shadow-lg flex-1 md:flex-none flex justify-center items-center gap-2 transform hover:-translate-y-1">
+                      <span v-if="!isCapturing" class="text-sm md:text-lg">▶️ Start Capturing</span>
+                      <span v-else class="text-sm md:text-lg">⏸ Pause Capturing</span>
+                   </button>
+                   <button @click="restartTest" class="bg-slate-800 hover:bg-slate-700 text-white px-4 md:px-6 py-3 md:py-4 rounded-xl font-bold transition shadow flex-1 md:flex-none flex justify-center items-center gap-2 border border-slate-700 text-sm md:text-base">
+                      🔄 Restart
+                   </button>
+                   <button @click="confirmExitSession" class="bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white px-4 md:px-6 py-3 md:py-4 rounded-xl font-bold transition shadow-lg w-full md:w-auto flex justify-center items-center gap-2 transform hover:-translate-y-1 text-sm md:text-base mt-1 md:mt-0">
+                      ⏹ Exit Quiz
+                   </button>
+                </div>
+              </div>
+
+              <!-- Live Projection Box -->
+              <div class="w-full lg:w-1/2 bg-white/90 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white flex flex-col overflow-hidden">
+                <div class="bg-white text-slate-800 p-4 md:p-5 font-bold flex justify-between items-center shadow-sm z-10 flex-wrap gap-4 border-b border-slate-100">
+                  <span class="flex items-center gap-2 md:gap-3 text-base md:text-lg font-extrabold text-slate-800">
+                     <span class="w-3 h-3 rounded-full" :class="isCapturing ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,1)] animate-pulse' : 'bg-amber-400'"></span> 
+                     Projection
+                     <button @click="openProjectionWindow" class="ml-1 md:ml-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-700 hover:to-cyan-600 px-3 py-1.5 rounded-lg text-xs font-bold shadow-md transform hover:-translate-y-0.5 transition-all flex items-center gap-1 shrink-0" title="Pop out to a new external window for projectors">
+                       🪟 Pop Out
+                     </button>
+                  </span>
+                  
+                  <!-- Toggle to show/hide the encoded question content -->
+                  <label class="flex items-center gap-2 text-xs font-bold cursor-pointer bg-slate-100 px-3 md:px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-200 transition border border-slate-200 shadow-inner">
+                     <input type="checkbox" v-model="projectQuestion" class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500">
+                     Show Question
+                  </label>
+                </div>
+
+                <!-- In-App Colorful Question Preview -->
+                <div v-if="projectQuestion && (activeQuizData.Questions[qIndex]?.qText || activeQuizData.Questions[qIndex]?.optA)" class="p-5 md:p-6 bg-gradient-to-br from-blue-700 via-blue-800 to-slate-900 text-white flex-shrink-0 shadow-inner border-b border-white/20 relative overflow-hidden">
+                   <!-- Decorative elements -->
+                   <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none -mt-10 -mr-10"></div>
+                   
+                   <p class="font-extrabold text-lg md:text-xl mb-4 drop-shadow-md leading-tight">{{ activeQuizData.Questions[qIndex].qText || 'Context not provided.' }}</p>
+                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs md:text-sm font-medium">
+                      <div v-if="activeQuizData.Questions[qIndex].optA" class="bg-white/10 backdrop-blur-md p-2.5 rounded-xl border border-white/20 shadow-sm flex items-center overflow-hidden"><span class="w-6 h-6 rounded bg-yellow-400 text-yellow-900 font-black flex items-center justify-center mr-3 shrink-0">A</span><span class="truncate">{{activeQuizData.Questions[qIndex].optA}}</span></div>
+                      <div v-if="activeQuizData.Questions[qIndex].optB" class="bg-white/10 backdrop-blur-md p-2.5 rounded-xl border border-white/20 shadow-sm flex items-center overflow-hidden"><span class="w-6 h-6 rounded bg-blue-400 text-blue-900 font-black flex items-center justify-center mr-3 shrink-0">B</span><span class="truncate">{{activeQuizData.Questions[qIndex].optB}}</span></div>
+                      <div v-if="activeQuizData.Questions[qIndex].optC" class="bg-white/10 backdrop-blur-md p-2.5 rounded-xl border border-white/20 shadow-sm flex items-center overflow-hidden"><span class="w-6 h-6 rounded bg-emerald-400 text-emerald-900 font-black flex items-center justify-center mr-3 shrink-0">C</span><span class="truncate">{{activeQuizData.Questions[qIndex].optC}}</span></div>
+                      <div v-if="activeQuizData.Questions[qIndex].optD" class="bg-white/10 backdrop-blur-md p-2.5 rounded-xl border border-white/20 shadow-sm flex items-center overflow-hidden"><span class="w-6 h-6 rounded bg-rose-400 text-rose-900 font-black flex items-center justify-center mr-3 shrink-0">D</span><span class="truncate">{{activeQuizData.Questions[qIndex].optD}}</span></div>
+                   </div>
+                </div>
+
+                <!-- Student Grid -->
+                <div class="flex-1 p-4 md:p-5 overflow-y-auto bg-slate-50/50 grid grid-cols-2 md:grid-cols-3 gap-3 content-start">
+                   <div v-for="s in currentScanStudents" :key="s.StudentID" 
+                        :class="['p-3 md:p-4 rounded-2xl border-2 flex justify-between items-center transition-all duration-300 font-bold text-sm md:text-base',
+                          getStudentResult(s.StudentID) === null ? 'bg-white border-slate-200 text-slate-500 shadow-sm' :
+                          getStudentResult(s.StudentID).isCorrect ? 'bg-emerald-100 border-emerald-400 text-emerald-900 shadow-md transform scale-105' :
+                          'bg-rose-100 border-rose-400 text-rose-900 shadow-md transform scale-105'
+                        ]">
+                     <span class="truncate pr-2">{{ s.RosterNumber }}. {{ s.StudentName.split(' ')[0] }}</span>
+                     <span v-if="getStudentResult(s.StudentID)" class="bg-white px-2 md:px-3 py-1 rounded-lg border shadow-sm text-sm md:text-base shrink-0">{{ getStudentResult(s.StudentID).answer }}</span>
+                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Powered by PVNJ Footer -->
+          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Powered by: PVNJ</div>
         </div>
-      </div>
-      
-    </div> <!-- End Main Content -->
+
+        <!-- ANALYTICS TAB -->
+        <div v-show="activeTab === 'analytics'" class="flex flex-col h-full print:hidden">
+          <div class="flex-1 min-h-0 flex flex-col">
+            <div class="bg-white/90 backdrop-blur-xl p-6 md:p-8 rounded-[2rem] shadow-xl border border-white mb-6 shrink-0">
+              <h2 class="text-2xl md:text-3xl font-extrabold mb-6 text-slate-800">Analytics Dashboard</h2>
+              <select v-model="analyticsSession" class="w-full md:w-1/2 border-none shadow-inner bg-slate-100 p-3 md:p-4 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-bold text-slate-700 text-base md:text-lg">
+                 <option value="">-- Select a Completed Session --</option>
+                 <option v-for="sess in uniqueSessions" :value="sess.SessionID">{{ sess.DateStr }} - {{ getClassName(sess.ClassID) }} - {{ getQuizName(sess.QuizID) }}</option>
+              </select>
+            </div>
+
+            <div v-if="analyticsStats" class="flex-1 overflow-y-auto space-y-6 md:space-y-8 pb-12 pr-1 md:pr-2">
+               <!-- Stats Summary -->
+               <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                 <div class="bg-gradient-to-br from-blue-600 to-blue-800 p-6 md:p-8 rounded-[2rem] border border-white/20 text-center shadow-xl text-white relative overflow-hidden transform hover:-translate-y-1 transition-all">
+                   <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+                   <div class="text-blue-100 font-bold uppercase tracking-wider mb-2 text-xs md:text-sm">Mean Score</div>
+                   <div class="text-4xl md:text-5xl font-black">{{ analyticsStats.mean }}</div>
+                 </div>
+                 <div class="bg-gradient-to-br from-cyan-600 to-blue-700 p-6 md:p-8 rounded-[2rem] border border-white/20 text-center shadow-xl text-white relative overflow-hidden transform hover:-translate-y-1 transition-all">
+                   <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+                   <div class="text-cyan-100 font-bold uppercase tracking-wider mb-2 text-xs md:text-sm">Standard Deviation</div>
+                   <div class="text-4xl md:text-5xl font-black">{{ analyticsStats.sd }}</div>
+                 </div>
+                 <div class="bg-gradient-to-br from-slate-700 to-slate-900 p-6 md:p-8 rounded-[2rem] border border-white/20 text-center shadow-xl text-white relative overflow-hidden transform hover:-translate-y-1 transition-all">
+                   <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+                   <div class="text-slate-300 font-bold uppercase tracking-wider mb-2 text-xs md:text-sm">Participation</div>
+                   <div class="text-4xl md:text-5xl font-black">{{ analyticsStats.scores.length }} <span class="text-base md:text-lg font-bold opacity-80">learners</span></div>
+                 </div>
+               </div>
+
+               <!-- Item Analysis Table -->
+               <div class="bg-white/90 backdrop-blur-xl p-5 md:p-8 rounded-[2rem] border border-white shadow-xl">
+                 <h3 class="font-extrabold text-xl md:text-2xl mb-4 md:mb-6 text-slate-800">Item Analysis (Raw Scans)</h3>
+                 <div class="overflow-x-auto rounded-2xl border border-slate-100 w-full">
+                   <table class="w-full text-left text-xs md:text-sm whitespace-nowrap min-w-[600px]">
+                     <thead class="bg-slate-100/80 backdrop-blur-sm">
+                       <tr>
+                          <th class="p-4 md:p-5 w-20 md:w-24 font-black text-slate-400 uppercase tracking-wider">Item</th>
+                          <th class="p-4 md:p-5 w-16 md:w-20 font-black text-slate-400 uppercase tracking-wider text-center">Key</th>
+                          <th class="p-4 md:p-5 font-black text-slate-400 uppercase tracking-wider">Correct %</th>
+                          <th class="p-4 md:p-5 text-center font-black text-yellow-600 uppercase tracking-wider bg-yellow-50/50">A (n)</th>
+                          <th class="p-4 md:p-5 text-center font-black text-blue-600 uppercase tracking-wider bg-blue-50/50">B (n)</th>
+                          <th class="p-4 md:p-5 text-center font-black text-emerald-600 uppercase tracking-wider bg-emerald-50/50">C (n)</th>
+                          <th class="p-4 md:p-5 text-center font-black text-rose-600 uppercase tracking-wider bg-rose-50/50">D (n)</th>
+                       </tr>
+                     </thead>
+                     <tbody>
+                       <tr v-for="(item, i) in analyticsStats.itemAnalysis" class="border-b hover:bg-slate-50 transition-colors">
+                         <td class="p-4 md:p-5 font-black text-slate-700 text-base md:text-lg">{{ item.label }}</td>
+                         <td class="p-4 md:p-5 text-blue-600 font-black text-base md:text-lg text-center"><span class="bg-blue-100 px-2 md:px-3 py-1 rounded-lg">{{ item.key }}</span></td>
+                         <td class="p-4 md:p-5 font-bold">
+                           <div class="flex items-center gap-2 md:gap-3">
+                             <div class="w-24 md:w-32 h-2.5 md:h-3 bg-slate-200 rounded-full overflow-hidden shadow-inner">
+                               <div :class="['h-full rounded-full transition-all', item.diff >= 70 ? 'bg-emerald-500' : item.diff >= 40 ? 'bg-amber-400' : 'bg-rose-500']" :style="'width:' + item.diff + '%'"></div>
+                             </div>
+                             <span class="text-sm md:text-base" :class="item.diff >= 70 ? 'text-emerald-600' : item.diff >= 40 ? 'text-amber-600' : 'text-rose-600'">{{ item.diff }}%</span>
+                           </div>
+                         </td>
+                         <td class="p-4 md:p-5 text-yellow-700 text-center font-black text-base md:text-lg bg-yellow-50/20">{{ item.A }}</td>
+                         <td class="p-4 md:p-5 text-blue-700 text-center font-black text-base md:text-lg bg-blue-50/20">{{ item.B }}</td>
+                         <td class="p-4 md:p-5 text-emerald-700 text-center font-black text-base md:text-lg bg-emerald-50/20">{{ item.C }}</td>
+                         <td class="p-4 md:p-5 text-rose-700 text-center font-black text-base md:text-lg bg-rose-50/20">{{ item.D }}</td>
+                       </tr>
+                     </tbody>
+                   </table>
+                 </div>
+               </div>
+            </div>
+            <div v-else-if="analyticsSession" class="flex-1 flex flex-col items-center justify-center text-slate-400 opacity-60">
+               <div class="text-5xl md:text-6xl mb-4">📭</div>
+               <div class="text-lg md:text-xl font-bold text-center">No data available for this session.</div>
+            </div>
+          </div>
+          <!-- Powered by PVNJ Footer -->
+          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Powered by: PVNJ</div>
+        </div>
+        
+      </div> <!-- End Scrollable Content -->
+    </div> <!-- End Main Content Flex -->
 
     <!-- Hidden Print Container -->
     <div id="print-area" class="hidden">
       <div v-for="s in currentStudents" :key="s.StudentID" class="qr-card">
-         <div class="absolute top-4 left-4 text-xs text-slate-500 font-mono">SEC: {{ getClassName(s.ClassID) }}</div>
+         <div class="print-sec">SEC: {{ getClassName(s.ClassID) }}</div>
          <div class="qr-wrapper">
            <span class="letter letter-A">A</span>
            <span class="letter letter-B">B</span>
            <span class="letter letter-C">C</span>
            <span class="letter letter-D">D</span>
-           <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(s.StudentID) + '&margin=0'" class="qr-image" crossorigin="anonymous"/>
+           <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=' + encodeURIComponent(s.StudentID) + '&margin=0'" class="qr-image" crossorigin="anonymous"/>
          </div>
-         <div class="absolute bottom-6 right-6 text-right">
-           <div class="font-bold text-4xl">#{{ s.RosterNumber }}</div>
-           <div class="text-xl font-medium mt-1">{{ s.StudentName }}</div>
+         <div class="print-info">
+           <div class="num">#{{ s.RosterNumber }}</div>
+           <div class="name">{{ s.StudentName }}</div>
          </div>
       </div>
     </div>
@@ -515,6 +653,7 @@
         const lastScanMap = {};
         const isCapturing = ref(false); // Controls if the scanner processes QR frames
         const liveSessionResults = ref([]); // reactive UI updates for current session
+        const projectQuestion = ref(true); // Controls if the question is projected
 
         // API Helper for Fetching
         const apiCall = async (action, payload = null) => {
@@ -833,7 +972,17 @@
           if(!selectedQuizData.value) return;
           // Dynamically predict the next logical question number (1, 2, 3...) as a string
           const nextItemNum = (selectedQuizData.value.Questions.length + 1).toString();
-          selectedQuizData.value.Questions.push({ id: crypto.randomUUID(), text: nextItemNum, answer: 'A' });
+          selectedQuizData.value.Questions.push({ 
+             id: crypto.randomUUID(), 
+             text: nextItemNum, 
+             answer: 'A',
+             qText: '',   // Support for encoding actual questions
+             optA: '',    // Support for encoding option text
+             optB: '',
+             optC: '',
+             optD: '',
+             showDetails: false // Detail editor starts collapsed
+          });
           markKeyUnsaved();
         };
 
@@ -871,7 +1020,7 @@
                  body { background-color: #0f172a; color: white; font-family: ui-sans-serif, system-ui, sans-serif; }
                </style>
              </head>
-             <body class="p-8">
+             <body class="p-8 bg-slate-900 min-h-screen">
                <div id="projection-root"></div>
              </body>
              </html>
@@ -887,38 +1036,66 @@
            const root = projectionWindow.value.document.getElementById('projection-root');
            if (!root) return;
 
-           const itemLabel = activeQuizData.value?.Questions[qIndex.value]?.text || (qIndex.value + 1);
+           const activeQ = activeQuizData.value?.Questions[qIndex.value];
+           const itemLabel = activeQ?.text || (qIndex.value + 1);
            const totalItems = activeQuizData.value?.Questions.length || 0;
            const isCap = isCapturing.value;
 
+           // Determine if we should show the vibrant encoded question block
+           const showQuestionBlock = projectQuestion.value && activeQ && (activeQ.qText || activeQ.optA || activeQ.optB || activeQ.optC || activeQ.optD);
+
            let html = `
-             <div class="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
-               <h1 class="text-4xl font-bold flex items-center gap-4">
-                 <span class="w-6 h-6 rounded-full ${isCap ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}"></span> 
+             <div class="flex justify-between items-center mb-8 border-b border-slate-700/50 pb-6">
+               <h1 class="text-4xl font-extrabold flex items-center gap-4 bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 to-blue-400">
+                 <span class="w-8 h-8 rounded-full ${isCap ? 'bg-emerald-400 shadow-[0_0_20px_rgba(52,211,153,1)] animate-pulse' : 'bg-amber-500'}"></span> 
                  Live Scan Projection
                </h1>
-               <div class="text-3xl bg-slate-800 px-6 py-3 rounded-full font-bold shadow-inner border border-slate-700">
+               <div class="text-3xl bg-slate-800/80 px-8 py-4 rounded-2xl font-black shadow-inner border border-slate-700">
                  Item ${itemLabel} <span class="text-slate-500">/ ${totalItems}</span>
                </div>
              </div>
-             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 content-start">
            `;
 
+           // Colorful Encoded Question Panel
+           if (showQuestionBlock) {
+               html += `
+                 <div class="bg-gradient-to-br from-blue-700 via-blue-800 to-slate-900 p-8 rounded-[2rem] shadow-2xl mb-8 text-white border border-white/20 relative overflow-hidden transition-all duration-500">
+                    <!-- Decorative lively background blobs -->
+                    <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
+                    <div class="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
+                    
+                    <!-- The Question Text -->
+                    <h2 class="text-3xl md:text-5xl font-extrabold mb-8 drop-shadow-lg leading-tight text-white">${activeQ.qText || 'Listen carefully to the teacher for the question context!'}</h2>
+                    
+                    <!-- The Colorful Options -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 text-2xl">
+                       ${activeQ.optA ? `<div class="bg-white/10 p-5 rounded-2xl backdrop-blur-md border border-white/20 shadow-xl flex items-center"><span class="inline-flex justify-center items-center w-12 h-12 bg-yellow-400 text-yellow-900 font-black rounded-xl mr-5 shadow-sm">A</span> <span class="font-bold">${activeQ.optA}</span></div>` : ''}
+                       ${activeQ.optB ? `<div class="bg-white/10 p-5 rounded-2xl backdrop-blur-md border border-white/20 shadow-xl flex items-center"><span class="inline-flex justify-center items-center w-12 h-12 bg-blue-400 text-blue-900 font-black rounded-xl mr-5 shadow-sm">B</span> <span class="font-bold">${activeQ.optB}</span></div>` : ''}
+                       ${activeQ.optC ? `<div class="bg-white/10 p-5 rounded-2xl backdrop-blur-md border border-white/20 shadow-xl flex items-center"><span class="inline-flex justify-center items-center w-12 h-12 bg-emerald-400 text-emerald-900 font-black rounded-xl mr-5 shadow-sm">C</span> <span class="font-bold">${activeQ.optC}</span></div>` : ''}
+                       ${activeQ.optD ? `<div class="bg-white/10 p-5 rounded-2xl backdrop-blur-md border border-white/20 shadow-xl flex items-center"><span class="inline-flex justify-center items-center w-12 h-12 bg-rose-400 text-rose-900 font-black rounded-xl mr-5 shadow-sm">D</span> <span class="font-bold">${activeQ.optD}</span></div>` : ''}
+                    </div>
+                 </div>
+               `;
+           }
+
+           // Students Grid
+           html += `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 content-start">`;
+           
            currentScanStudents.value.forEach(s => {
               const res = getStudentResult(s.StudentID);
-              let boxClass = "bg-slate-800 border-slate-700 text-slate-500";
+              let boxClass = "bg-slate-800/80 border-slate-700 text-slate-500";
               let ansHtml = "";
               if (res) {
                  if (res.isCorrect) {
-                    boxClass = "bg-green-900/80 border-green-500 text-green-100 shadow-[0_0_20px_rgba(34,197,94,0.4)]";
+                    boxClass = "bg-emerald-900/80 border-emerald-500 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.4)]";
                  } else {
-                    boxClass = "bg-red-900/80 border-red-500 text-red-100 shadow-[0_0_20px_rgba(239,68,68,0.4)]";
+                    boxClass = "bg-rose-900/80 border-rose-500 text-rose-100 shadow-[0_0_20px_rgba(244,63,94,0.4)]";
                  }
-                 ansHtml = `<span class="bg-black/40 px-4 py-1.5 rounded-lg font-bold text-2xl border border-white/10">${res.answer}</span>`;
+                 ansHtml = `<span class="bg-black/40 px-5 py-2 rounded-xl font-black text-3xl border border-white/10">${res.answer}</span>`;
               }
               html += `
-                <div class="p-5 rounded-2xl border-2 flex justify-between items-center transition-all duration-300 ${boxClass}">
-                   <span class="text-2xl font-bold truncate pr-2">${s.RosterNumber}. ${s.StudentName.split(' ')[0]}</span>
+                <div class="p-6 rounded-3xl border-2 flex justify-between items-center transition-all duration-300 ${boxClass}">
+                   <span class="text-3xl font-extrabold truncate pr-2">${s.RosterNumber}. ${s.StudentName.split(' ')[0]}</span>
                    ${ansHtml}
                 </div>
               `;
@@ -934,7 +1111,7 @@
         const currentScanStudents = computed(() => students.value.filter(s => s.ClassID === scanClass.value).sort((a,b)=>a.RosterNumber - b.RosterNumber));
 
         // Keep the external window synchronized with internal scanner variables
-        watch([liveSessionResults, qIndex, isCapturing, currentScanStudents], () => {
+        watch([liveSessionResults, qIndex, isCapturing, currentScanStudents, projectQuestion], () => {
            renderProjection();
         }, { deep: true });
 
@@ -1029,8 +1206,8 @@
                      ctx.lineTo(code.location.bottomRightCorner.x, code.location.bottomRightCorner.y);
                      ctx.lineTo(code.location.bottomLeftCorner.x, code.location.bottomLeftCorner.y);
                      ctx.closePath();
-                     ctx.lineWidth = 4;
-                     ctx.strokeStyle = '#22c55e';
+                     ctx.lineWidth = 6;
+                     ctx.strokeStyle = '#22d3ee'; // Cyan targeting box
                      ctx.stroke();
 
                      const studentId = code.data;
@@ -1126,7 +1303,7 @@
           newClassName, selectedClass, addClass, deleteClass, currentStudents,
           newStudentName, bulkStudentText, addStudent, bulkAddStudents, deleteStudent, getClassName, printQRs,
           newQuizName, selectedQuiz, addQuiz, deleteQuiz, selectedQuizData, addQuestion, removeQuestion,
-          scanClass, scanQuiz, activeSessionId, qIndex, isCapturing, startSession, restartTest, confirmExitSession, endSession, activeQuizData, activeQuestionKey, currentScanStudents, getStudentResult,
+          scanClass, scanQuiz, activeSessionId, qIndex, isCapturing, projectQuestion, startSession, restartTest, confirmExitSession, endSession, activeQuizData, activeQuestionKey, currentScanStudents, getStudentResult,
           video, canvas, openProjectionWindow,
           analyticsSession, uniqueSessions, getQuizName, analyticsStats,
           cameraBlocked,
