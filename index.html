@@ -340,7 +340,13 @@
           <!-- Live Projection Box -->
           <div class="w-full lg:w-1/2 bg-white rounded-xl shadow-md border flex flex-col overflow-hidden">
             <div class="bg-slate-800 text-white p-4 font-bold flex justify-between items-center shadow-md z-10">
-              <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full animate-pulse" :class="isCapturing ? 'bg-green-400' : 'bg-amber-500'"></span> Live Projection</span>
+              <span class="flex items-center gap-2">
+                 <span class="w-2 h-2 rounded-full animate-pulse" :class="isCapturing ? 'bg-green-400' : 'bg-amber-500'"></span> 
+                 Live Projection
+                 <button @click="openProjectionWindow" class="ml-2 text-slate-400 hover:text-white transition bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-xs flex items-center gap-1 shadow-sm border border-slate-600" title="Pop out to a new external window for projectors">
+                   🪟 Pop Out
+                 </button>
+              </span>
               <span class="text-sm bg-slate-700 px-3 py-1 rounded-full">Item {{ activeQuizData.Questions[qIndex]?.text || (qIndex + 1) }} / {{ activeQuizData.Questions.length }}</span>
             </div>
             <div class="flex-1 p-4 overflow-y-auto bg-slate-50 grid grid-cols-2 md:grid-cols-3 gap-3 content-start">
@@ -823,6 +829,97 @@
           markKeyUnsaved();
         };
 
+        // --- EXTERNAL PROJECTION WINDOW ---
+        const projectionWindow = ref(null);
+
+        const openProjectionWindow = () => {
+           if (projectionWindow.value && !projectionWindow.value.closed) {
+               projectionWindow.value.focus();
+               return;
+           }
+           
+           // Open blank popup
+           projectionWindow.value = window.open('', 'ScanMasterProjection', 'width=1000,height=700');
+           if (!projectionWindow.value) {
+               alert("Popup blocked! Please allow popups for this site to use the external projection window.");
+               return;
+           }
+           
+           // Write minimal structure to target via JS
+           const doc = projectionWindow.value.document;
+           doc.open();
+           doc.write(`
+             <!DOCTYPE html>
+             <html>
+             <head>
+               <title>ScanMaster Live Projection</title>
+               <script src="https://cdn.tailwindcss.com"><\/script>
+               <style>
+                 body { background-color: #0f172a; color: white; font-family: ui-sans-serif, system-ui, sans-serif; }
+               </style>
+             </head>
+             <body class="p-8">
+               <div id="projection-root"></div>
+             </body>
+             </html>
+           `);
+           doc.close();
+           
+           // Render projection immediately
+           setTimeout(renderProjection, 50);
+        };
+
+        const renderProjection = () => {
+           if (!projectionWindow.value || projectionWindow.value.closed) return;
+           const root = projectionWindow.value.document.getElementById('projection-root');
+           if (!root) return;
+
+           const itemLabel = activeQuizData.value?.Questions[qIndex.value]?.text || (qIndex.value + 1);
+           const totalItems = activeQuizData.value?.Questions.length || 0;
+           const isCap = isCapturing.value;
+
+           let html = `
+             <div class="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
+               <h1 class="text-4xl font-bold flex items-center gap-4">
+                 <span class="w-6 h-6 rounded-full ${isCap ? 'bg-green-500 animate-pulse' : 'bg-amber-500'}"></span> 
+                 Live Scan Projection
+               </h1>
+               <div class="text-3xl bg-slate-800 px-6 py-3 rounded-full font-bold shadow-inner border border-slate-700">
+                 Item ${itemLabel} <span class="text-slate-500">/ ${totalItems}</span>
+               </div>
+             </div>
+             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 content-start">
+           `;
+
+           currentScanStudents.value.forEach(s => {
+              const res = getStudentResult(s.StudentID);
+              let boxClass = "bg-slate-800 border-slate-700 text-slate-500";
+              let ansHtml = "";
+              if (res) {
+                 if (res.isCorrect) {
+                    boxClass = "bg-green-900/80 border-green-500 text-green-100 shadow-[0_0_20px_rgba(34,197,94,0.4)]";
+                 } else {
+                    boxClass = "bg-red-900/80 border-red-500 text-red-100 shadow-[0_0_20px_rgba(239,68,68,0.4)]";
+                 }
+                 ansHtml = `<span class="bg-black/40 px-4 py-1.5 rounded-lg font-bold text-2xl border border-white/10">${res.answer}</span>`;
+              }
+              html += `
+                <div class="p-5 rounded-2xl border-2 flex justify-between items-center transition-all duration-300 ${boxClass}">
+                   <span class="text-2xl font-bold truncate pr-2">${s.RosterNumber}. ${s.StudentName.split(' ')[0]}</span>
+                   ${ansHtml}
+                </div>
+              `;
+           });
+
+           html += `</div>`;
+           root.innerHTML = html;
+        };
+
+        // Keep the external window synchronized with internal scanner variables
+        watch([liveSessionResults, qIndex, isCapturing, currentScanStudents], () => {
+           renderProjection();
+        }, { deep: true });
+
         // --- SCANNER ---
         const scanClass = ref('');
         const scanQuiz = ref('');
@@ -903,6 +1000,12 @@
            cancelAnimationFrame(scanRaf);
            activeSessionId.value = '';
            isCapturing.value = false;
+           
+           // Automatically close the pop-out window if it is open
+           if (projectionWindow.value && !projectionWindow.value.closed) {
+               projectionWindow.value.close();
+               projectionWindow.value = null;
+           }
         };
 
         const tick = () => {
@@ -1024,7 +1127,7 @@
           newStudentName, bulkStudentText, addStudent, bulkAddStudents, deleteStudent, getClassName, printQRs,
           newQuizName, selectedQuiz, addQuiz, deleteQuiz, selectedQuizData, addQuestion, removeQuestion,
           scanClass, scanQuiz, activeSessionId, qIndex, isCapturing, startSession, restartTest, confirmExitSession, endSession, activeQuizData, activeQuestionKey, currentScanStudents, getStudentResult,
-          video, canvas,
+          video, canvas, openProjectionWindow,
           analyticsSession, uniqueSessions, getQuizName, analyticsStats,
           cameraBlocked,
           
