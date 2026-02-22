@@ -78,6 +78,11 @@
 <body class="bg-gradient-to-br from-slate-100 via-blue-50 to-slate-200 text-slate-800 font-sans h-screen overflow-hidden">
   <div id="app" v-cloak class="flex h-full print:block">
     
+    <!-- Offline Indicator Banner -->
+    <div v-if="isOffline" class="fixed top-0 left-0 right-0 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-900 font-bold text-center py-2 z-[100] text-sm md:text-base flex justify-center items-center gap-3 shadow-md animate-fade-in print:hidden">
+        <span class="text-xl">⚠️</span> <span>You are currently offline. Changes are saved locally and will auto-sync when connected.</span>
+    </div>
+
     <!-- Login/Register Screen -->
     <div v-if="!isLoggedIn" class="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-blue-700 flex flex-col items-center justify-center z-50 p-4 md:p-6 overflow-hidden">
        <!-- Decorative background elements -->
@@ -117,7 +122,7 @@
       <!-- Decorative sidebar shapes -->
       <div class="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl pointer-events-none -mt-10 -mr-10"></div>
       
-      <div class="p-8 font-extrabold text-3xl tracking-wider flex items-center gap-3 border-b border-blue-500/20 relative z-10 drop-shadow-md">
+      <div :class="['p-8 font-extrabold text-3xl tracking-wider flex items-center gap-3 border-b border-blue-500/20 relative z-10 drop-shadow-md', isOffline ? 'mt-10' : '']">
         📸 <span class="bg-clip-text text-transparent bg-gradient-to-r from-white to-cyan-200">ScanMaster</span>
       </div>
       <nav class="flex-1 py-6 space-y-2 relative z-10">
@@ -127,13 +132,16 @@
         <button @click="activeTab = 'analytics'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'analytics' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📊 Analytics</button>
       </nav>
       <div class="p-6 border-t border-blue-500/20 bg-black/20 relative z-10 backdrop-blur-md">
-         <div class="text-sm font-bold text-white mb-2 flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,1)]"></span> {{ authUser }}</div>
+         <div class="text-sm font-bold text-white mb-2 flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(52,211,153,1)]" :class="isOffline ? 'bg-amber-400 shadow-amber-400' : 'bg-emerald-400'"></span> 
+            {{ authUser }}
+         </div>
          <button @click="logout" class="text-xs text-blue-300 hover:text-white font-bold w-full text-left transition flex items-center gap-2">🚪 Sign Out</button>
       </div>
     </div>
 
     <!-- Mobile Topbar -->
-    <div v-if="isLoggedIn" class="md:hidden fixed top-0 left-0 right-0 bg-gradient-to-r from-slate-900 to-blue-900 text-white p-4 flex justify-between items-center z-20 print:hidden shadow-lg border-b border-blue-500/20">
+    <div v-if="isLoggedIn" :class="['md:hidden fixed left-0 right-0 bg-gradient-to-r from-slate-900 to-blue-900 text-white p-4 flex justify-between items-center z-20 print:hidden shadow-lg border-b border-blue-500/20 transition-all', isOffline ? 'top-10' : 'top-0']">
       <div class="font-extrabold text-xl flex items-center gap-2">📸 ScanMaster</div>
       <div class="flex items-center gap-3">
         <select v-model="activeTab" class="bg-black/30 border border-blue-500/30 outline-none text-sm p-2 rounded-lg text-white font-bold backdrop-blur-sm max-w-[120px]">
@@ -158,7 +166,7 @@
       </div>
 
       <!-- Main Scrollable Area -->
-      <div class="flex-1 overflow-auto p-4 md:p-8 pt-24 md:pt-8 print:p-0">
+      <div :class="['flex-1 overflow-auto p-4 md:p-8 print:p-0 transition-all', isOffline ? 'pt-28 md:pt-16' : 'pt-24 md:pt-8']">
 
         <!-- CLASSES TAB -->
         <div v-show="activeTab === 'classes'" class="flex flex-col h-full print:hidden">
@@ -607,6 +615,7 @@
         const gasUrl = ref(HARDCODED_URL);
         
         const isLoggedIn = ref(false);
+        const isOffline = ref(!navigator.onLine);
         const authMode = ref('login'); // 'login' or 'register'
         const authUser = ref(localStorage.getItem('ScanMaster_User') || '');
         const authPass = ref(localStorage.getItem('ScanMaster_Pass') || '');
@@ -648,7 +657,7 @@
         const selectedQuiz = ref('');
         const cameraBlocked = ref(false);
 
-        // SCANNER STATE - MUST BE DECLARED BEFORE WATCHERS/COMPUTED
+        // SCANNER STATE
         const scanClass = ref('');
         const scanQuiz = ref('');
         const activeSessionId = ref('');
@@ -664,6 +673,9 @@
 
         // API Helper for Fetching
         const apiCall = async (action, payload = null) => {
+          if (isOffline.value) {
+             return { status: 'offline_queued' };
+          }
           if (!gasUrl.value) return null;
 
           if (!gasUrl.value.startsWith('https://script.google.com/')) {
@@ -684,13 +696,11 @@
             });
             const textData = await res.text();
             
-            // Check for Google Login redirection blocking the request
             if (textData.trim().startsWith('<')) {
               console.warn("API Call Blocked: Deployed with wrong permissions.");
               return { error: "Permission Error: Google blocked the connection.\n\nYou must deploy the script with:\n- Execute as: Me\n- Who has access: Anyone" };
             }
             
-            // If the text returned isn't JSON, we catch it gracefully
             try {
               return JSON.parse(textData);
             } catch (parseError) {
@@ -700,6 +710,9 @@
 
           } catch(e) {
             console.error('API Error:', e);
+            // Catch network fetch failures indicating offline status mid-flight
+            isOffline.value = !navigator.onLine;
+            if (isOffline.value) return { status: 'offline_queued' };
             return { error: "Network Error: Could not connect to Google Server.\nDetails: " + e.message };
           }
         };
@@ -716,6 +729,19 @@
            authError.value = "";
            isLoading.value = true;
            
+           if (isOffline.value) {
+               const savedUser = localStorage.getItem('ScanMaster_User');
+               const savedPass = localStorage.getItem('ScanMaster_Pass');
+               if (authUser.value === savedUser && authPass.value === savedPass) {
+                   isLoggedIn.value = true;
+                   loadDatabase();
+               } else {
+                   authError.value = "Offline Mode: Cannot verify new credentials. Use the last logged-in account.";
+               }
+               isLoading.value = false;
+               return;
+           }
+
            const res = await apiCall('authenticate', { mode: authMode.value });
            
            if (res && res.status === 'success') {
@@ -744,20 +770,49 @@
            quizzes.value = [];
            results.value = [];
            
-           // Clear queues on logout so un-saved data gets wiped out
            classQueue.value = [];
            studentQueue.value = [];
            quizQueue.value = [];
            unsavedKeysMap.value = {};
            
-           areQuizzesLoaded.value = false; // Reset lazy loading
+           areQuizzesLoaded.value = false; 
 
-           // Stop background syncing safely
+           // Clear local caches upon logout for security
+           localStorage.removeItem('ScanMaster_Cache_Classes');
+           localStorage.removeItem('ScanMaster_Cache_Students');
+           localStorage.removeItem('ScanMaster_Cache_Quizzes');
+           localStorage.removeItem('ScanMaster_Cache_Results');
+           localStorage.removeItem('ScanMaster_Queue_Classes');
+           localStorage.removeItem('ScanMaster_Queue_Students');
+           localStorage.removeItem('ScanMaster_Queue_Quizzes');
+           localStorage.removeItem('ScanMaster_Queue_Scans');
+           localStorage.removeItem('ScanMaster_Unsaved_Keys');
+
            if (syncInterval) {
                clearInterval(syncInterval);
                syncInterval = null;
            }
         };
+
+        // Deep Watchers for Offline Persistence
+        const persistLocalData = () => {
+            if (!isLoggedIn.value) return;
+            localStorage.setItem('ScanMaster_Cache_Classes', JSON.stringify(classes.value));
+            localStorage.setItem('ScanMaster_Cache_Students', JSON.stringify(students.value));
+            localStorage.setItem('ScanMaster_Cache_Quizzes', JSON.stringify(quizzes.value));
+            localStorage.setItem('ScanMaster_Cache_Results', JSON.stringify(results.value));
+        };
+        const persistQueues = () => {
+            if (!isLoggedIn.value) return;
+            localStorage.setItem('ScanMaster_Queue_Classes', JSON.stringify(classQueue.value));
+            localStorage.setItem('ScanMaster_Queue_Students', JSON.stringify(studentQueue.value));
+            localStorage.setItem('ScanMaster_Queue_Quizzes', JSON.stringify(quizQueue.value));
+            localStorage.setItem('ScanMaster_Queue_Scans', JSON.stringify(localScans.value));
+            localStorage.setItem('ScanMaster_Unsaved_Keys', JSON.stringify(unsavedKeysMap.value));
+        };
+
+        watch([classes, students, quizzes, results], persistLocalData, { deep: true });
+        watch([classQueue, studentQueue, quizQueue, localScans, unsavedKeysMap], persistQueues, { deep: true });
 
         // Automatic DB Data Format Upgrader for Quizzes
         const migrateQuizData = (quizzesList) => {
@@ -777,10 +832,41 @@
         };
 
         const loadDatabase = async () => {
-          if (!gasUrl.value || !isLoggedIn.value) return;
+          if (!isLoggedIn.value) return;
           isLoading.value = true;
+          
+          // 1. Immediately Load from Local Cache (Offline First behavior)
           try {
-            // Securely POSTs for data belonging ONLY to this user
+             const cClasses = localStorage.getItem('ScanMaster_Cache_Classes');
+             if (cClasses) classes.value = JSON.parse(cClasses);
+             const cStudents = localStorage.getItem('ScanMaster_Cache_Students');
+             if (cStudents) students.value = JSON.parse(cStudents);
+             const cQuizzes = localStorage.getItem('ScanMaster_Cache_Quizzes');
+             if (cQuizzes) { quizzes.value = JSON.parse(cQuizzes); areQuizzesLoaded.value = true; }
+             const cResults = localStorage.getItem('ScanMaster_Cache_Results');
+             if (cResults) results.value = JSON.parse(cResults);
+             
+             // Restore Queues
+             const qClasses = localStorage.getItem('ScanMaster_Queue_Classes');
+             if (qClasses) classQueue.value = JSON.parse(qClasses);
+             const qStudents = localStorage.getItem('ScanMaster_Queue_Students');
+             if (qStudents) studentQueue.value = JSON.parse(qStudents);
+             const qQuizzes = localStorage.getItem('ScanMaster_Queue_Quizzes');
+             if (qQuizzes) quizQueue.value = JSON.parse(qQuizzes);
+             const qScans = localStorage.getItem('ScanMaster_Queue_Scans');
+             if (qScans) localScans.value = JSON.parse(qScans);
+             const uKeys = localStorage.getItem('ScanMaster_Unsaved_Keys');
+             if (uKeys) unsavedKeysMap.value = JSON.parse(uKeys);
+          } catch(e) { console.warn("Cache parse error", e); }
+
+          if (isOffline.value) {
+              if (['quizzes', 'scanner', 'analytics'].includes(activeTab.value)) loadQuizzes();
+              isLoading.value = false;
+              return;
+          }
+
+          // 2. Fetch fresh data from DB if Online
+          try {
             const data = await apiCall('getData');
             
             if (data && data.error) throw new Error(data.error);
@@ -788,41 +874,51 @@
             
             classes.value = data.classes || [];
             students.value = data.students || [];
+            // Preserve the unsynced local results so they aren't hidden before syncing
+            results.value = [...(data.results || []), ...localScans.value];
             
-            // SKIPPED ON LOGIN: quizzes.value = data.quizzes; 
-            // We now rely on lazy-loading when navigating to quiz-related tabs
-            
-            results.value = data.results || [];
-            
-            // Clean up any old intervals before starting a new one
             if (syncInterval) clearInterval(syncInterval);
             
-            // Start background sync loop for live scans
+            // Start robust background sync loop
             syncInterval = setInterval(async () => {
+              if (isOffline.value) return;
+
+              // Sync Scans
               if (localScans.value.length > 0) {
                  const batch = [...localScans.value];
-                 localScans.value = [];
-                 await apiCall('recordScans', { scans: batch });
-                 results.value.push(...batch); // Optimistic local update
+                 const res = await apiCall('recordScans', { scans: batch });
+                 if (res && res.status === 'success') {
+                     localScans.value = localScans.value.slice(batch.length);
+                 }
               }
+
+              // Auto-sync other queues continuously
+              if (classQueue.value.length > 0 && !isSavingClasses.value) saveClasses();
+              if (studentQueue.value.length > 0 && !isSavingStudents.value) saveStudents();
+              if (quizQueue.value.length > 0 && !isSavingQuizzes.value) saveQuizzes();
+              
             }, 3000);
 
           } catch(e) {
             console.error(e);
             alert("Database Sync Error:\n\n" + e.message);
-            logout(); // Kick back to login screen on error
+            logout(); 
           }
           isLoading.value = false;
           
-          // If the user happens to start on a quiz-dependent tab, trigger fetch immediately
           if (['quizzes', 'scanner', 'analytics'].includes(activeTab.value)) {
              loadQuizzes();
           }
         };
 
-        // --- LAZY LOAD QUIZZES ---
         const loadQuizzes = async () => {
            if (areQuizzesLoaded.value || !isLoggedIn.value) return;
+           
+           if (isOffline.value) {
+               areQuizzesLoaded.value = true;
+               return;
+           }
+
            isLoading.value = true;
            try {
               const res = await apiCall('getQuizzes');
@@ -836,7 +932,6 @@
            isLoading.value = false;
         };
 
-        // Watch tab changes to lazy-load quizzes only when needed
         watch(activeTab, (newTab) => {
            if (['quizzes', 'scanner', 'analytics'].includes(newTab)) {
               loadQuizzes();
@@ -844,6 +939,9 @@
         });
 
         onMounted(() => {
+          window.addEventListener('online', () => isOffline.value = false);
+          window.addEventListener('offline', () => isOffline.value = true);
+
           if (gasUrl.value && authUser.value && authPass.value) {
              authenticate();
           }
@@ -873,6 +971,7 @@
           for (let action of classQueue.value) {
             const res = await apiCall('modifyDB', action);
             if (res && res.status === 'success') successCount++;
+            else if (res && res.status === 'offline_queued') break;
             else { alert("Error saving. Check internet connection."); break; }
           }
           classQueue.value = classQueue.value.slice(successCount);
@@ -910,9 +1009,8 @@
              currentRoster++;
           });
 
-          // Send to the queue as a single bulk action to be saved
           studentQueue.value.push({ subAction: 'bulkAddStudents', data: { students: newStudentsBatch } });
-          bulkStudentText.value = ''; // clear text area
+          bulkStudentText.value = ''; 
         };
 
         const deleteStudent = (id) => {
@@ -927,6 +1025,7 @@
           for (let action of studentQueue.value) {
             const res = await apiCall('modifyDB', action);
             if (res && res.status === 'success') successCount++;
+            else if (res && res.status === 'offline_queued') break;
             else { alert("Error saving. Check internet connection."); break; }
           }
           studentQueue.value = studentQueue.value.slice(successCount);
@@ -960,6 +1059,7 @@
           for (let action of quizQueue.value) {
             const res = await apiCall('modifyDB', action);
             if (res && res.status === 'success') successCount++;
+            else if (res && res.status === 'offline_queued') break;
             else { alert("Error saving. Check internet connection."); break; }
           }
           quizQueue.value = quizQueue.value.slice(successCount);
@@ -981,12 +1081,11 @@
           isSavingKey.value = true;
           const res = await apiCall('modifyDB', { 
             subAction: 'updateQuiz', 
-            // This includes the flexible QuizName so the DB updates it!
             data: { id: selectedQuizData.value.QuizID, name: selectedQuizData.value.QuizName, questions: selectedQuizData.value.Questions } 
           });
           if (res && res.status === 'success') {
              unsavedKeysMap.value[selectedQuizData.value.QuizID] = false;
-          } else {
+          } else if (res && res.status !== 'offline_queued') {
              alert("Error saving answer key. Check internet connection.");
           }
           isSavingKey.value = false;
@@ -994,7 +1093,6 @@
 
         const addQuestion = () => {
           if(!selectedQuizData.value) return;
-          // Dynamically predict the next logical question number (1, 2, 3...) as a string
           const nextItemNum = (selectedQuizData.value.Questions.length + 1).toString();
           selectedQuizData.value.Questions.push({ 
              id: crypto.randomUUID(), 
@@ -1007,7 +1105,7 @@
                 { label: 'C', text: '' },
                 { label: 'D', text: '' }
              ],
-             showDetails: false // Detail editor starts collapsed
+             showDetails: false 
           });
           markKeyUnsaved();
         };
@@ -1017,7 +1115,6 @@
           markKeyUnsaved();
         };
 
-        // Add a new dynamic option choice (E, F, G, etc.)
         const addChoice = (q) => {
             const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
             const nextLabel = alphabet[q.options.length];
@@ -1027,17 +1124,12 @@
             }
         };
 
-        // Remove a dynamic option choice and re-label sequence
         const removeChoice = (q, idx) => {
             q.options.splice(idx, 1);
             const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-            
-            // Re-assign letters to ensure they are strictly sequential
             q.options.forEach((opt, i) => {
                 opt.label = alphabet[i];
             });
-
-            // Adjust answer key logic if deleted answer was the correct one
             if (!q.options.find(o => o.label === q.answer) && q.options.length > 0) {
                 q.answer = q.options[0].label;
             } else if (q.options.length === 0) {
@@ -1046,7 +1138,6 @@
             markKeyUnsaved();
         };
 
-        // Returns dynamic color styles based on choice index mapping
         const getOptStyles = (idx) => {
           const styles = [
             { bg: 'bg-yellow-100', text: 'text-yellow-700', ring: 'focus-within:ring-yellow-400', badge: 'bg-yellow-400 text-yellow-900' },
@@ -1069,14 +1160,12 @@
                return;
            }
            
-           // Open blank popup
            projectionWindow.value = window.open('', 'ScanMasterProjection', 'width=1000,height=700');
            if (!projectionWindow.value) {
                alert("Popup blocked! Please allow popups for this site to use the external projection window.");
                return;
            }
            
-           // Write minimal structure to target via JS
            const doc = projectionWindow.value.document;
            doc.open();
            doc.write(`
@@ -1096,7 +1185,6 @@
            `);
            doc.close();
            
-           // Render projection immediately
            setTimeout(renderProjection, 50);
         };
 
@@ -1110,7 +1198,6 @@
            const totalItems = activeQuizData.value?.Questions.length || 0;
            const isCap = isCapturing.value;
 
-           // Determine if we should show the vibrant encoded question block dynamically
            const showQuestionBlock = projectQuestion.value && activeQ && (activeQ.qText || activeQ.options.some(o => o.text));
 
            let html = `
@@ -1125,7 +1212,6 @@
              </div>
            `;
 
-           // Colorful Encoded Question Panel Using Dynamic Iteration
            if (showQuestionBlock) {
                let optionsHtml = '';
                activeQ.options.forEach((opt, oIdx) => {
@@ -1137,14 +1223,11 @@
 
                html += `
                  <div class="bg-gradient-to-br from-blue-700 via-blue-800 to-slate-900 p-8 rounded-[2rem] shadow-2xl mb-8 text-white border border-white/20 relative overflow-hidden transition-all duration-500">
-                    <!-- Decorative lively background blobs -->
                     <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
                     <div class="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
                     
-                    <!-- The Question Text -->
                     <h2 class="text-3xl md:text-5xl font-extrabold mb-8 drop-shadow-lg leading-tight text-white">${activeQ.qText || 'Listen carefully to the teacher for the question context!'}</h2>
                     
-                    <!-- The Colorful Dynamic Options -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5 text-2xl">
                        ${optionsHtml}
                     </div>
@@ -1152,7 +1235,6 @@
                `;
            }
 
-           // Students Grid
            html += `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 content-start">`;
            
            currentScanStudents.value.forEach(s => {
@@ -1184,7 +1266,6 @@
         const activeQuestionKey = computed(() => activeQuizData.value?.Questions[qIndex.value]?.answer);
         const currentScanStudents = computed(() => students.value.filter(s => s.ClassID === scanClass.value).sort((a,b)=>a.RosterNumber - b.RosterNumber));
 
-        // Keep the external window synchronized with internal scanner variables
         watch([liveSessionResults, qIndex, isCapturing, currentScanStudents, projectQuestion], () => {
            renderProjection();
         }, { deep: true });
@@ -1203,7 +1284,7 @@
            qIndex.value = 0;
            liveSessionResults.value = [];
            cameraBlocked.value = false;
-           isCapturing.value = false; // Initialize to paused state
+           isCapturing.value = false; 
 
            try {
              if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1252,7 +1333,6 @@
            activeSessionId.value = '';
            isCapturing.value = false;
            
-           // Automatically close the pop-out window if it is open
            if (projectionWindow.value && !projectionWindow.value.closed) {
                projectionWindow.value.close();
                projectionWindow.value = null;
@@ -1268,7 +1348,6 @@
               canvas.value.width = video.value.videoWidth;
               ctx.drawImage(video.value, 0, 0, canvas.value.width, canvas.value.height);
               
-              // Only search for QR code if the capture button is toggled ON
               if (isCapturing.value) {
                   const imgData = ctx.getImageData(0,0, canvas.value.width, canvas.value.height);
                   const code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
@@ -1281,13 +1360,12 @@
                      ctx.lineTo(code.location.bottomLeftCorner.x, code.location.bottomLeftCorner.y);
                      ctx.closePath();
                      ctx.lineWidth = 6;
-                     ctx.strokeStyle = '#22d3ee'; // Cyan targeting box
+                     ctx.strokeStyle = '#22d3ee'; 
                      ctx.stroke();
 
                      const studentId = code.data;
                      const now = Date.now();
                      
-                     // Debounce 1.5s
                      if (!lastScanMap[studentId] || now - lastScanMap[studentId] > 1500) {
                         if (currentScanStudents.value.some(s => s.StudentID === studentId)) {
                             const dx = code.location.topLeftCorner.x - code.location.bottomLeftCorner.x;
@@ -1303,11 +1381,14 @@
                             
                             const payload = {
                                sessionId: activeSessionId.value, classId: scanClass.value, quizId: scanQuiz.value,
-                               studentId: studentId, qNum: qIndex.value + 1, answer: ans, isCorrect: isCorrect
+                               studentId: studentId, qNum: qIndex.value + 1, answer: ans, isCorrect: isCorrect, Timestamp: new Date().toISOString()
                             };
 
                             liveSessionResults.value = liveSessionResults.value.filter(r => !(r.studentId === studentId && r.qNum === (qIndex.value+1)));
                             liveSessionResults.value.push(payload);
+                            
+                            // Push directly into results.value so it works in analytics instantly even if offline
+                            results.value.push(payload);
                             localScans.value.push(payload);
                             lastScanMap[studentId] = now;
                         }
@@ -1350,7 +1431,6 @@
            const mean = scoresArr.reduce((a,b)=>a+b, 0) / Math.max(scoresArr.length, 1);
            const variance = scoresArr.reduce((a,b)=>a+Math.pow(b-mean, 2), 0) / Math.max(scoresArr.length, 1);
 
-           // Find the maximum number of options a question had so we can dynamically build columns
            const maxOptionsLength = Math.max(...quizMeta.Questions.map(q => q.options?.length || 4));
            const analysisHeaders = Array.from({length: maxOptionsLength}, (_, i) => String.fromCharCode(65 + i));
 
@@ -1359,14 +1439,13 @@
               const qAns = sResults.filter(r => r.QuestionNum === qNum);
               const total = Math.max(qAns.length, 1);
               
-              // Calculate dynamic counts based on the array generated
               const counts = {};
               analysisHeaders.forEach(lbl => {
                   counts[lbl] = qAns.filter(r => r.Answer === lbl).length;
               });
 
               return {
-                 label: q.text || (i + 1).toString(), // Shows the flexible custom label
+                 label: q.text || (i + 1).toString(),
                  key: q.answer,
                  diff: Math.round((qAns.filter(r=>r.IsCorrect).length / total) * 100),
                  counts: counts
@@ -1377,7 +1456,7 @@
         });
 
         return {
-          gasUrl, isLoggedIn, authMode, authUser, authPass, authError, authenticate, toggleAuthMode, logout,
+          gasUrl, isLoggedIn, isOffline, authMode, authUser, authPass, authError, authenticate, toggleAuthMode, logout,
           isLoading, activeTab, classes, students, quizzes, areQuizzesLoaded,
           newClassName, selectedClass, addClass, deleteClass, currentStudents,
           newStudentName, bulkStudentText, addStudent, bulkAddStudents, deleteStudent, getClassName, printQRs,
