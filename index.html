@@ -122,16 +122,19 @@
       <!-- Decorative sidebar shapes -->
       <div class="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl pointer-events-none -mt-10 -mr-10"></div>
       
-      <div :class="['p-8 font-extrabold text-3xl tracking-wider flex items-center gap-3 border-b border-blue-500/20 relative z-10 drop-shadow-md', isOffline ? 'mt-10' : '']">
+      <!-- ADDED shrink-0 so header doesn't compress on short screens -->
+      <div :class="['p-8 font-extrabold text-3xl tracking-wider flex items-center gap-3 border-b border-blue-500/20 relative z-10 drop-shadow-md shrink-0', isOffline ? 'mt-10' : '']">
         📸 <span class="bg-clip-text text-transparent bg-gradient-to-r from-white to-cyan-200">ScanMaster</span>
       </div>
-      <nav class="flex-1 py-6 space-y-2 relative z-10">
+      <!-- ADDED overflow-y-auto so navigation scrolls if window is too short -->
+      <nav class="flex-1 py-6 space-y-2 relative z-10 overflow-y-auto overscroll-contain">
         <button @click="activeTab = 'classes'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'classes' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">👥 Sections & Students</button>
         <button @click="activeTab = 'quizzes'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'quizzes' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📝 Quizzes & Keys</button>
         <button @click="activeTab = 'scanner'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'scanner' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📷 Live Scanner</button>
         <button @click="activeTab = 'analytics'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'analytics' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📊 Analytics</button>
       </nav>
-      <div class="p-6 border-t border-blue-500/20 bg-black/20 relative z-10 backdrop-blur-md flex flex-col gap-3">
+      <!-- ADDED shrink-0 so footer always stays visible -->
+      <div class="p-6 border-t border-blue-500/20 bg-black/20 relative z-10 backdrop-blur-md flex flex-col gap-3 shrink-0">
          <div class="text-sm font-bold text-white mb-2 flex items-center gap-2">
             <span class="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(52,211,153,1)]" :class="isOffline ? 'bg-amber-400 shadow-amber-400' : 'bg-emerald-400'"></span> 
             {{ authUser }}
@@ -146,19 +149,22 @@
     </div>
 
     <!-- Mobile Topbar -->
-    <div v-if="isLoggedIn" :class="['md:hidden fixed left-0 right-0 bg-gradient-to-r from-slate-900 to-blue-900 text-white p-4 flex justify-between items-center z-20 print:hidden shadow-lg border-b border-blue-500/20 transition-all', isOffline ? 'top-10' : 'top-0']">
-      <div class="font-extrabold text-xl flex items-center gap-2 truncate pr-2">📸 ScanMaster</div>
-      <div class="flex items-center gap-2">
-        <select v-model="activeTab" class="bg-black/30 border border-blue-500/30 outline-none text-sm p-2 rounded-lg text-white font-bold backdrop-blur-sm max-w-[100px] sm:max-w-[120px]">
+    <div v-if="isLoggedIn" :class="['md:hidden fixed left-0 right-0 bg-gradient-to-r from-slate-900 to-blue-900 text-white p-3 sm:p-4 flex justify-between items-center z-20 print:hidden shadow-lg border-b border-blue-500/20 transition-all', isOffline ? 'top-10' : 'top-0']">
+      <div class="font-extrabold text-lg sm:text-xl flex items-center gap-2 flex-1 min-w-0 pr-2">
+        <span class="flex-shrink-0">📸</span>
+        <span class="truncate">ScanMaster</span>
+      </div>
+      <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+        <select v-model="activeTab" class="bg-black/30 border border-blue-500/30 outline-none text-xs sm:text-sm p-2 rounded-lg text-white font-bold backdrop-blur-sm max-w-[90px] sm:max-w-[120px]">
           <option value="classes" class="text-slate-800">Sections</option>
           <option value="quizzes" class="text-slate-800">Quizzes</option>
           <option value="scanner" class="text-slate-800">Scanner</option>
           <option value="analytics" class="text-slate-800">Analytics</option>
         </select>
-        <button @click="forceSync" :disabled="isLoading" class="text-xl bg-blue-800/50 hover:bg-blue-700/50 hover:scale-105 transition min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-50 rounded-xl border border-blue-500/30 shadow-sm flex-shrink-0" title="Sync Data">
+        <button @click="forceSync" :disabled="isLoading" class="text-lg sm:text-xl bg-blue-800/50 hover:bg-blue-700/50 transition min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-50 rounded-xl border border-blue-500/30 shadow-sm flex-shrink-0" title="Sync Data">
           <span :class="{'animate-spin': isLoading}">🔄</span>
         </button>
-        <button @click="logout" class="text-xl bg-blue-800/50 hover:bg-blue-700/50 hover:scale-105 transition min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-blue-500/30 shadow-sm flex-shrink-0" title="Sign Out">🚪</button>
+        <button @click="logout" class="text-lg sm:text-xl bg-blue-800/50 hover:bg-blue-700/50 transition min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-blue-500/30 shadow-sm flex-shrink-0" title="Sign Out">🚪</button>
       </div>
     </div>
 
