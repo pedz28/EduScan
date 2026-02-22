@@ -315,22 +315,29 @@
                       <!-- Flexible Syntax / Question Label -->
                       <input v-model="q.text" @input="markKeyUnsaved" class="w-16 md:w-24 font-black text-slate-700 border-none bg-slate-100 p-2 md:p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-center shadow-inner text-base md:text-lg" placeholder="1a">
                       
+                      <!-- Dynamic Choice Dropdown -->
                       <select v-model="q.answer" @change="markKeyUnsaved" class="flex-1 border-none shadow-inner p-2 md:p-3 rounded-xl font-black text-blue-700 bg-slate-100 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-base md:text-lg min-w-[100px]">
-                        <option value="A">Opt A</option><option value="B">Opt B</option><option value="C">Opt C</option><option value="D">Opt D</option>
+                        <option v-for="opt in q.options" :key="opt.label" :value="opt.label">Choice {{ opt.label }}</option>
                       </select>
                       
                       <button @click="q.showDetails = !q.showDetails" :class="q.showDetails ? 'bg-cyan-100 text-cyan-700' : 'text-slate-400 hover:bg-slate-100 hover:text-cyan-600'" class="p-2 md:p-3 rounded-xl text-base md:text-lg transition-colors font-bold shadow-sm shrink-0" title="Encode Question Content">📝</button>
                       <button @click="removeQuestion(idx)" class="text-rose-400 font-bold hover:text-white hover:bg-rose-500 w-10 h-10 rounded-xl flex items-center justify-center transition-colors text-xl shrink-0" title="Remove Item">&times;</button>
                     </div>
 
-                    <!-- Expanded Content Editor (Optional encoding) -->
+                    <!-- Expanded Content Editor (Dynamic Options Encoding) -->
                     <div v-if="q.showDetails" class="mt-4 pt-4 border-t-2 border-dashed border-slate-200 grid gap-3 animate-fade-in">
                        <textarea v-model="q.qText" @input="markKeyUnsaved" placeholder="Type the actual question here (Optional)..." class="w-full border-none bg-blue-50/50 shadow-inner p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium text-slate-800" rows="2"></textarea>
+                       
                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm font-medium">
-                         <div class="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-100 shadow-sm focus-within:ring-2 focus-within:ring-yellow-400"><span class="inline-flex justify-center items-center w-8 h-8 rounded-lg bg-yellow-100 text-yellow-700 font-black">A</span><input v-model="q.optA" @input="markKeyUnsaved" placeholder="Choice A" class="flex-1 border-none bg-transparent outline-none text-slate-700 w-full min-w-0"></div>
-                         <div class="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-100 shadow-sm focus-within:ring-2 focus-within:ring-blue-400"><span class="inline-flex justify-center items-center w-8 h-8 rounded-lg bg-blue-100 text-blue-700 font-black">B</span><input v-model="q.optB" @input="markKeyUnsaved" placeholder="Choice B" class="flex-1 border-none bg-transparent outline-none text-slate-700 w-full min-w-0"></div>
-                         <div class="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-100 shadow-sm focus-within:ring-2 focus-within:ring-green-400"><span class="inline-flex justify-center items-center w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 font-black">C</span><input v-model="q.optC" @input="markKeyUnsaved" placeholder="Choice C" class="flex-1 border-none bg-transparent outline-none text-slate-700 w-full min-w-0"></div>
-                         <div class="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-100 shadow-sm focus-within:ring-2 focus-within:ring-red-400"><span class="inline-flex justify-center items-center w-8 h-8 rounded-lg bg-rose-100 text-rose-700 font-black">D</span><input v-model="q.optD" @input="markKeyUnsaved" placeholder="Choice D" class="flex-1 border-none bg-transparent outline-none text-slate-700 w-full min-w-0"></div>
+                         <div v-for="(opt, oIdx) in q.options" :key="oIdx" class="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-100 shadow-sm transition-all duration-300" :class="getOptStyles(oIdx).ring">
+                           <span class="inline-flex justify-center items-center w-8 h-8 rounded-lg font-black transition-colors" :class="getOptStyles(oIdx).bg + ' ' + getOptStyles(oIdx).text">{{ opt.label }}</span>
+                           <input v-model="opt.text" @input="markKeyUnsaved" :placeholder="'Choice ' + opt.label" class="flex-1 border-none bg-transparent outline-none text-slate-700 w-full min-w-0">
+                           <button @click="removeChoice(q, oIdx)" class="text-slate-300 hover:text-rose-500 font-black px-2 text-xl" title="Delete Choice">&times;</button>
+                         </div>
+                         <!-- Add Dynamic Choice Button -->
+                         <button @click="addChoice(q)" class="flex items-center justify-center gap-2 bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 border-2 border-dashed border-slate-200 hover:border-blue-300 rounded-xl p-2 transition-all font-bold w-full h-full min-h-[44px]">
+                           <span class="text-lg leading-none">+</span> Add Choice
+                         </button>
                        </div>
                     </div>
                   </div>
@@ -452,17 +459,17 @@
                   </label>
                 </div>
 
-                <!-- In-App Colorful Question Preview -->
-                <div v-if="projectQuestion && (activeQuizData.Questions[qIndex]?.qText || activeQuizData.Questions[qIndex]?.optA)" class="p-5 md:p-6 bg-gradient-to-br from-blue-700 via-blue-800 to-slate-900 text-white flex-shrink-0 shadow-inner border-b border-white/20 relative overflow-hidden">
+                <!-- In-App Colorful Question Preview with dynamic options -->
+                <div v-if="projectQuestion && activeQuizData.Questions[qIndex] && (activeQuizData.Questions[qIndex].qText || activeQuizData.Questions[qIndex].options.some(o => o.text))" class="p-5 md:p-6 bg-gradient-to-br from-blue-700 via-blue-800 to-slate-900 text-white flex-shrink-0 shadow-inner border-b border-white/20 relative overflow-hidden">
                    <!-- Decorative elements -->
                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none -mt-10 -mr-10"></div>
                    
                    <p class="font-extrabold text-lg md:text-xl mb-4 drop-shadow-md leading-tight">{{ activeQuizData.Questions[qIndex].qText || 'Context not provided.' }}</p>
                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs md:text-sm font-medium">
-                      <div v-if="activeQuizData.Questions[qIndex].optA" class="bg-white/10 backdrop-blur-md p-2.5 rounded-xl border border-white/20 shadow-sm flex items-center overflow-hidden"><span class="w-6 h-6 rounded bg-yellow-400 text-yellow-900 font-black flex items-center justify-center mr-3 shrink-0">A</span><span class="truncate">{{activeQuizData.Questions[qIndex].optA}}</span></div>
-                      <div v-if="activeQuizData.Questions[qIndex].optB" class="bg-white/10 backdrop-blur-md p-2.5 rounded-xl border border-white/20 shadow-sm flex items-center overflow-hidden"><span class="w-6 h-6 rounded bg-blue-400 text-blue-900 font-black flex items-center justify-center mr-3 shrink-0">B</span><span class="truncate">{{activeQuizData.Questions[qIndex].optB}}</span></div>
-                      <div v-if="activeQuizData.Questions[qIndex].optC" class="bg-white/10 backdrop-blur-md p-2.5 rounded-xl border border-white/20 shadow-sm flex items-center overflow-hidden"><span class="w-6 h-6 rounded bg-emerald-400 text-emerald-900 font-black flex items-center justify-center mr-3 shrink-0">C</span><span class="truncate">{{activeQuizData.Questions[qIndex].optC}}</span></div>
-                      <div v-if="activeQuizData.Questions[qIndex].optD" class="bg-white/10 backdrop-blur-md p-2.5 rounded-xl border border-white/20 shadow-sm flex items-center overflow-hidden"><span class="w-6 h-6 rounded bg-rose-400 text-rose-900 font-black flex items-center justify-center mr-3 shrink-0">D</span><span class="truncate">{{activeQuizData.Questions[qIndex].optD}}</span></div>
+                      <div v-for="(opt, oIdx) in activeQuizData.Questions[qIndex].options" :key="oIdx" v-show="opt.text" class="bg-white/10 backdrop-blur-md p-2.5 rounded-xl border border-white/20 shadow-sm flex items-center overflow-hidden">
+                        <span class="w-6 h-6 rounded font-black flex items-center justify-center mr-3 shrink-0" :class="getOptStyles(oIdx).badge">{{ opt.label }}</span>
+                        <span class="truncate">{{ opt.text }}</span>
+                      </div>
                    </div>
                 </div>
 
@@ -516,7 +523,7 @@
                  </div>
                </div>
 
-               <!-- Item Analysis Table -->
+               <!-- Item Analysis Table (Dynamically Spanned options) -->
                <div class="bg-white/90 backdrop-blur-xl p-5 md:p-8 rounded-[2rem] border border-white shadow-xl">
                  <h3 class="font-extrabold text-xl md:text-2xl mb-4 md:mb-6 text-slate-800">Item Analysis (Raw Scans)</h3>
                  <div class="overflow-x-auto rounded-2xl border border-slate-100 w-full">
@@ -526,14 +533,14 @@
                           <th class="p-4 md:p-5 w-20 md:w-24 font-black text-slate-400 uppercase tracking-wider">Item</th>
                           <th class="p-4 md:p-5 w-16 md:w-20 font-black text-slate-400 uppercase tracking-wider text-center">Key</th>
                           <th class="p-4 md:p-5 font-black text-slate-400 uppercase tracking-wider">Correct %</th>
-                          <th class="p-4 md:p-5 text-center font-black text-yellow-600 uppercase tracking-wider bg-yellow-50/50">A (n)</th>
-                          <th class="p-4 md:p-5 text-center font-black text-blue-600 uppercase tracking-wider bg-blue-50/50">B (n)</th>
-                          <th class="p-4 md:p-5 text-center font-black text-emerald-600 uppercase tracking-wider bg-emerald-50/50">C (n)</th>
-                          <th class="p-4 md:p-5 text-center font-black text-rose-600 uppercase tracking-wider bg-rose-50/50">D (n)</th>
+                          <!-- Dynamic Analysis Column Headers based on Max Choices -->
+                          <th v-for="(lbl, i) in analyticsStats.analysisHeaders" :key="lbl" class="p-4 md:p-5 text-center font-black uppercase tracking-wider" :class="getOptStyles(i).text + ' ' + getOptStyles(i).bg">
+                             {{ lbl }} (n)
+                          </th>
                        </tr>
                      </thead>
                      <tbody>
-                       <tr v-for="(item, i) in analyticsStats.itemAnalysis" class="border-b hover:bg-slate-50 transition-colors">
+                       <tr v-for="(item, i) in analyticsStats.itemAnalysis" :key="i" class="border-b hover:bg-slate-50 transition-colors">
                          <td class="p-4 md:p-5 font-black text-slate-700 text-base md:text-lg">{{ item.label }}</td>
                          <td class="p-4 md:p-5 text-blue-600 font-black text-base md:text-lg text-center"><span class="bg-blue-100 px-2 md:px-3 py-1 rounded-lg">{{ item.key }}</span></td>
                          <td class="p-4 md:p-5 font-bold">
@@ -544,10 +551,10 @@
                              <span class="text-sm md:text-base" :class="item.diff >= 70 ? 'text-emerald-600' : item.diff >= 40 ? 'text-amber-600' : 'text-rose-600'">{{ item.diff }}%</span>
                            </div>
                          </td>
-                         <td class="p-4 md:p-5 text-yellow-700 text-center font-black text-base md:text-lg bg-yellow-50/20">{{ item.A }}</td>
-                         <td class="p-4 md:p-5 text-blue-700 text-center font-black text-base md:text-lg bg-blue-50/20">{{ item.B }}</td>
-                         <td class="p-4 md:p-5 text-emerald-700 text-center font-black text-base md:text-lg bg-emerald-50/20">{{ item.C }}</td>
-                         <td class="p-4 md:p-5 text-rose-700 text-center font-black text-base md:text-lg bg-rose-50/20">{{ item.D }}</td>
+                         <!-- Dynamic Count Values -->
+                         <td v-for="(lbl, colIdx) in analyticsStats.analysisHeaders" :key="lbl" class="p-4 md:p-5 text-center font-black text-base md:text-lg" :class="getOptStyles(colIdx).text">
+                           <span class="px-3 py-1 rounded-lg bg-opacity-40" :class="getOptStyles(colIdx).bg.replace('100', '50')">{{ item.counts[lbl] || 0 }}</span>
+                         </td>
                        </tr>
                      </tbody>
                    </table>
@@ -752,6 +759,23 @@
            }
         };
 
+        // Automatic DB Data Format Upgrader for Quizzes
+        const migrateQuizData = (quizzesList) => {
+            quizzesList.forEach(quiz => {
+                quiz.Questions.forEach(q => {
+                    if (!q.options) {
+                        q.options = [
+                            {label: 'A', text: q.optA || ''},
+                            {label: 'B', text: q.optB || ''},
+                            {label: 'C', text: q.optC || ''},
+                            {label: 'D', text: q.optD || ''}
+                        ];
+                    }
+                });
+            });
+            return quizzesList;
+        };
+
         const loadDatabase = async () => {
           if (!gasUrl.value || !isLoggedIn.value) return;
           isLoading.value = true;
@@ -803,7 +827,7 @@
            try {
               const res = await apiCall('getQuizzes');
               if (res && res.error) throw new Error(res.error);
-              quizzes.value = res?.quizzes || [];
+              quizzes.value = migrateQuizData(res?.quizzes || []);
               areQuizzesLoaded.value = true;
            } catch (e) {
               console.error(e);
@@ -976,11 +1000,13 @@
              id: crypto.randomUUID(), 
              text: nextItemNum, 
              answer: 'A',
-             qText: '',   // Support for encoding actual questions
-             optA: '',    // Support for encoding option text
-             optB: '',
-             optC: '',
-             optD: '',
+             qText: '',
+             options: [
+                { label: 'A', text: '' },
+                { label: 'B', text: '' },
+                { label: 'C', text: '' },
+                { label: 'D', text: '' }
+             ],
              showDetails: false // Detail editor starts collapsed
           });
           markKeyUnsaved();
@@ -989,6 +1015,49 @@
         const removeQuestion = (idx) => {
           selectedQuizData.value.Questions.splice(idx, 1);
           markKeyUnsaved();
+        };
+
+        // Add a new dynamic option choice (E, F, G, etc.)
+        const addChoice = (q) => {
+            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const nextLabel = alphabet[q.options.length];
+            if (nextLabel) {
+               q.options.push({ label: nextLabel, text: '' });
+               markKeyUnsaved();
+            }
+        };
+
+        // Remove a dynamic option choice and re-label sequence
+        const removeChoice = (q, idx) => {
+            q.options.splice(idx, 1);
+            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            
+            // Re-assign letters to ensure they are strictly sequential
+            q.options.forEach((opt, i) => {
+                opt.label = alphabet[i];
+            });
+
+            // Adjust answer key logic if deleted answer was the correct one
+            if (!q.options.find(o => o.label === q.answer) && q.options.length > 0) {
+                q.answer = q.options[0].label;
+            } else if (q.options.length === 0) {
+                q.answer = '';
+            }
+            markKeyUnsaved();
+        };
+
+        // Returns dynamic color styles based on choice index mapping
+        const getOptStyles = (idx) => {
+          const styles = [
+            { bg: 'bg-yellow-100', text: 'text-yellow-700', ring: 'focus-within:ring-yellow-400', badge: 'bg-yellow-400 text-yellow-900' },
+            { bg: 'bg-blue-100', text: 'text-blue-700', ring: 'focus-within:ring-blue-400', badge: 'bg-blue-400 text-blue-900' },
+            { bg: 'bg-emerald-100', text: 'text-emerald-700', ring: 'focus-within:ring-emerald-400', badge: 'bg-emerald-400 text-emerald-900' },
+            { bg: 'bg-rose-100', text: 'text-rose-700', ring: 'focus-within:ring-rose-400', badge: 'bg-rose-400 text-rose-900' },
+            { bg: 'bg-purple-100', text: 'text-purple-700', ring: 'focus-within:ring-purple-400', badge: 'bg-purple-400 text-purple-900' },
+            { bg: 'bg-cyan-100', text: 'text-cyan-700', ring: 'focus-within:ring-cyan-400', badge: 'bg-cyan-400 text-cyan-900' },
+            { bg: 'bg-orange-100', text: 'text-orange-700', ring: 'focus-within:ring-orange-400', badge: 'bg-orange-400 text-orange-900' }
+          ];
+          return styles[idx % styles.length];
         };
 
         // --- EXTERNAL PROJECTION WINDOW ---
@@ -1041,8 +1110,8 @@
            const totalItems = activeQuizData.value?.Questions.length || 0;
            const isCap = isCapturing.value;
 
-           // Determine if we should show the vibrant encoded question block
-           const showQuestionBlock = projectQuestion.value && activeQ && (activeQ.qText || activeQ.optA || activeQ.optB || activeQ.optC || activeQ.optD);
+           // Determine if we should show the vibrant encoded question block dynamically
+           const showQuestionBlock = projectQuestion.value && activeQ && (activeQ.qText || activeQ.options.some(o => o.text));
 
            let html = `
              <div class="flex justify-between items-center mb-8 border-b border-slate-700/50 pb-6">
@@ -1056,8 +1125,16 @@
              </div>
            `;
 
-           // Colorful Encoded Question Panel
+           // Colorful Encoded Question Panel Using Dynamic Iteration
            if (showQuestionBlock) {
+               let optionsHtml = '';
+               activeQ.options.forEach((opt, oIdx) => {
+                   if (opt.text) {
+                       const style = getOptStyles(oIdx);
+                       optionsHtml += `<div class="bg-white/10 p-5 rounded-2xl backdrop-blur-md border border-white/20 shadow-xl flex items-center"><span class="inline-flex justify-center items-center w-12 h-12 ${style.badge} font-black rounded-xl mr-5 shadow-sm">${opt.label}</span> <span class="font-bold">${opt.text}</span></div>`;
+                   }
+               });
+
                html += `
                  <div class="bg-gradient-to-br from-blue-700 via-blue-800 to-slate-900 p-8 rounded-[2rem] shadow-2xl mb-8 text-white border border-white/20 relative overflow-hidden transition-all duration-500">
                     <!-- Decorative lively background blobs -->
@@ -1067,12 +1144,9 @@
                     <!-- The Question Text -->
                     <h2 class="text-3xl md:text-5xl font-extrabold mb-8 drop-shadow-lg leading-tight text-white">${activeQ.qText || 'Listen carefully to the teacher for the question context!'}</h2>
                     
-                    <!-- The Colorful Options -->
+                    <!-- The Colorful Dynamic Options -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5 text-2xl">
-                       ${activeQ.optA ? `<div class="bg-white/10 p-5 rounded-2xl backdrop-blur-md border border-white/20 shadow-xl flex items-center"><span class="inline-flex justify-center items-center w-12 h-12 bg-yellow-400 text-yellow-900 font-black rounded-xl mr-5 shadow-sm">A</span> <span class="font-bold">${activeQ.optA}</span></div>` : ''}
-                       ${activeQ.optB ? `<div class="bg-white/10 p-5 rounded-2xl backdrop-blur-md border border-white/20 shadow-xl flex items-center"><span class="inline-flex justify-center items-center w-12 h-12 bg-blue-400 text-blue-900 font-black rounded-xl mr-5 shadow-sm">B</span> <span class="font-bold">${activeQ.optB}</span></div>` : ''}
-                       ${activeQ.optC ? `<div class="bg-white/10 p-5 rounded-2xl backdrop-blur-md border border-white/20 shadow-xl flex items-center"><span class="inline-flex justify-center items-center w-12 h-12 bg-emerald-400 text-emerald-900 font-black rounded-xl mr-5 shadow-sm">C</span> <span class="font-bold">${activeQ.optC}</span></div>` : ''}
-                       ${activeQ.optD ? `<div class="bg-white/10 p-5 rounded-2xl backdrop-blur-md border border-white/20 shadow-xl flex items-center"><span class="inline-flex justify-center items-center w-12 h-12 bg-rose-400 text-rose-900 font-black rounded-xl mr-5 shadow-sm">D</span> <span class="font-bold">${activeQ.optD}</span></div>` : ''}
+                       ${optionsHtml}
                     </div>
                  </div>
                `;
@@ -1276,25 +1350,30 @@
            const mean = scoresArr.reduce((a,b)=>a+b, 0) / Math.max(scoresArr.length, 1);
            const variance = scoresArr.reduce((a,b)=>a+Math.pow(b-mean, 2), 0) / Math.max(scoresArr.length, 1);
 
+           // Find the maximum number of options a question had so we can dynamically build columns
+           const maxOptionsLength = Math.max(...quizMeta.Questions.map(q => q.options?.length || 4));
+           const analysisHeaders = Array.from({length: maxOptionsLength}, (_, i) => String.fromCharCode(65 + i));
+
            const itemAnalysis = quizMeta.Questions.map((q, i) => {
               const qNum = i + 1;
               const qAns = sResults.filter(r => r.QuestionNum === qNum);
               const total = Math.max(qAns.length, 1);
-              const count = (ans) => qAns.filter(r => r.Answer === ans).length;
+              
+              // Calculate dynamic counts based on the array generated
+              const counts = {};
+              analysisHeaders.forEach(lbl => {
+                  counts[lbl] = qAns.filter(r => r.Answer === lbl).length;
+              });
+
               return {
                  label: q.text || (i + 1).toString(), // Shows the flexible custom label
                  key: q.answer,
                  diff: Math.round((qAns.filter(r=>r.IsCorrect).length / total) * 100),
-                 
-                 // Returns actual scanned response counts for learners
-                 A: count('A'),
-                 B: count('B'),
-                 C: count('C'),
-                 D: count('D')
+                 counts: counts
               };
            });
 
-           return { mean: mean.toFixed(2), sd: Math.sqrt(variance).toFixed(2), scores: scoresArr, itemAnalysis };
+           return { mean: mean.toFixed(2), sd: Math.sqrt(variance).toFixed(2), scores: scoresArr, itemAnalysis, analysisHeaders };
         });
 
         return {
@@ -1302,7 +1381,7 @@
           isLoading, activeTab, classes, students, quizzes, areQuizzesLoaded,
           newClassName, selectedClass, addClass, deleteClass, currentStudents,
           newStudentName, bulkStudentText, addStudent, bulkAddStudents, deleteStudent, getClassName, printQRs,
-          newQuizName, selectedQuiz, addQuiz, deleteQuiz, selectedQuizData, addQuestion, removeQuestion,
+          newQuizName, selectedQuiz, addQuiz, deleteQuiz, selectedQuizData, addQuestion, removeQuestion, addChoice, removeChoice, getOptStyles,
           scanClass, scanQuiz, activeSessionId, qIndex, isCapturing, projectQuestion, startSession, restartTest, confirmExitSession, endSession, activeQuizData, activeQuestionKey, currentScanStudents, getStudentResult,
           video, canvas, openProjectionWindow,
           analyticsSession, uniqueSessions, getQuizName, analyticsStats,
