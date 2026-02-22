@@ -118,33 +118,39 @@
     </div>
 
     <!-- Lively Sidebar -->
-    <div v-if="isLoggedIn" class="w-72 bg-gradient-to-b from-slate-900 via-blue-900 to-blue-950 text-white flex-col shadow-2xl z-10 hidden md:flex print:hidden relative overflow-hidden">
-      <!-- Decorative sidebar shapes -->
-      <div class="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl pointer-events-none -mt-10 -mr-10"></div>
-      
-      <!-- shrink-0 so header doesn't compress on short screens -->
-      <div :class="['p-8 font-extrabold text-3xl tracking-wider flex items-center gap-3 border-b border-blue-500/20 relative z-10 drop-shadow-md shrink-0', isOffline ? 'mt-10' : '']">
-        📸 <span class="bg-clip-text text-transparent bg-gradient-to-r from-white to-cyan-200">ScanMaster</span>
-      </div>
-      <!-- overflow-y-auto so navigation scrolls if window is too short -->
-      <nav class="flex-1 py-6 space-y-2 relative z-10 overflow-y-auto overscroll-contain">
-        <button @click="activeTab = 'classes'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'classes' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">👥 Sections & Students</button>
-        <button @click="activeTab = 'quizzes'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'quizzes' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📝 Quizzes & Keys</button>
-        <button @click="activeTab = 'scanner'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'scanner' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📷 Live Scanner</button>
-        <button @click="activeTab = 'analytics'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'analytics' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📊 Analytics</button>
-      </nav>
-      <!-- shrink-0 so footer always stays visible -->
-      <div class="p-6 border-t border-blue-500/20 bg-black/20 relative z-10 backdrop-blur-md flex flex-col gap-3 shrink-0">
-         <div class="text-sm font-bold text-white mb-2 flex items-center gap-2">
-            <span class="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(52,211,153,1)]" :class="isOffline ? 'bg-amber-400 shadow-amber-400' : 'bg-emerald-400'"></span> 
-            {{ authUser }}
-         </div>
-         <button @click="forceSync" :disabled="isLoading" class="text-sm bg-blue-800/50 hover:bg-blue-700/50 text-emerald-300 hover:text-emerald-100 font-bold w-full text-left transition flex items-center gap-3 px-3 py-2.5 rounded-xl min-h-[44px] disabled:opacity-50 border border-blue-500/30">
-            <span class="text-xl flex-shrink-0" :class="{'animate-spin': isLoading}">🔄</span> Sync Data
-         </button>
-         <button @click="logout" class="text-sm bg-blue-800/50 hover:bg-blue-700/50 text-blue-300 hover:text-white font-bold w-full text-left transition flex items-center gap-3 px-3 py-2.5 rounded-xl min-h-[44px] border border-blue-500/30">
-            <span class="text-xl flex-shrink-0">🚪</span> Sign Out
-         </button>
+    <!-- UPDATED: Replaced overflow-hidden with overflow-y-auto so the ENTIRE sidebar can scroll in short views -->
+    <div v-if="isLoggedIn" class="w-72 bg-gradient-to-b from-slate-900 via-blue-900 to-blue-950 text-white shadow-2xl z-10 hidden md:block print:hidden relative overflow-y-auto overflow-x-hidden">
+      <!-- Added inner min-h-full flex wrapper to ensure bottom footer pushes down properly -->
+      <div class="flex flex-col min-h-full">
+        <!-- Decorative sidebar shapes -->
+        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl pointer-events-none -mt-10 -mr-10"></div>
+        
+        <!-- Header -->
+        <div :class="['p-8 font-extrabold text-3xl tracking-wider flex items-center gap-3 border-b border-blue-500/20 relative z-10 drop-shadow-md shrink-0', isOffline ? 'mt-10' : '']">
+          📸 <span class="bg-clip-text text-transparent bg-gradient-to-r from-white to-cyan-200">ScanMaster</span>
+        </div>
+        
+        <!-- Navigation area without individual scrolling, allowing parent sidebar to scroll it -->
+        <nav class="flex-1 py-6 space-y-2 relative z-10 shrink-0">
+          <button @click="activeTab = 'classes'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'classes' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">👥 Sections & Students</button>
+          <button @click="activeTab = 'quizzes'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'quizzes' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📝 Quizzes & Keys</button>
+          <button @click="activeTab = 'scanner'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'scanner' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📷 Live Scanner</button>
+          <button @click="activeTab = 'analytics'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'analytics' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📊 Analytics</button>
+        </nav>
+        
+        <!-- Footer area with mt-auto to anchor to bottom when there's no overflow -->
+        <div class="p-6 border-t border-blue-500/20 bg-black/20 relative z-10 backdrop-blur-md flex flex-col gap-3 shrink-0 mt-auto">
+           <div class="text-sm font-bold text-white mb-2 flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(52,211,153,1)]" :class="isOffline ? 'bg-amber-400 shadow-amber-400' : 'bg-emerald-400'"></span> 
+              {{ authUser }}
+           </div>
+           <button @click="forceSync" :disabled="isLoading" class="text-sm bg-blue-800/50 hover:bg-blue-700/50 text-emerald-300 hover:text-emerald-100 font-bold w-full text-left transition flex items-center gap-3 px-3 py-2.5 rounded-xl min-h-[44px] disabled:opacity-50 border border-blue-500/30">
+              <span class="text-xl flex-shrink-0" :class="{'animate-spin': isLoading}">🔄</span> Sync Data
+           </button>
+           <button @click="logout" class="text-sm bg-blue-800/50 hover:bg-blue-700/50 text-blue-300 hover:text-white font-bold w-full text-left transition flex items-center gap-3 px-3 py-2.5 rounded-xl min-h-[44px] border border-blue-500/30">
+              <span class="text-xl flex-shrink-0">🚪</span> Sign Out
+           </button>
+        </div>
       </div>
     </div>
 
