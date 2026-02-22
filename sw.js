@@ -1,7 +1,7 @@
-const CACHE_NAME = 'scanmaster-pwa-v4'; // Bumped to v4 to clear persistent invalid URL caches!
+const CACHE_NAME = 'scanmaster-pwa-v5'; // Bumped up to forcefully overwrite the old cached bugs!
 const ASSETS_TO_CACHE = [
   './',
-  './index.html', // Fixed casing: was previously Index.html which breaks on Github Pages
+  './index.html', // Fixed filename casing
   'https://unpkg.com/vue@3/dist/vue.global.prod.js',
   'https://cdn.tailwindcss.com',
   'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'
@@ -33,8 +33,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Only cache GET requests
   if (event.request.method !== 'GET') return;
-  
-  // STRICT RULE: Never cache calls to the Google Apps Script backend database
+
+  // STRICT RULE: Never let the offline worker intercept Google database connections.
   if (event.request.url.includes('script.google.com')) return;
 
   event.respondWith(
