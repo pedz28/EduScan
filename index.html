@@ -75,7 +75,7 @@
     ::-webkit-scrollbar-thumb:hover { background: #64748b; }
   </style>
 </head>
-<body class="bg-gradient-to-br from-slate-100 via-blue-50 to-slate-200 text-slate-800 font-sans h-screen overflow-hidden">
+<body class="bg-gradient-to-br from-slate-100 via-blue-50 to-slate-200 text-slate-800 font-sans h-[100dvh] overflow-hidden">
   <div id="app" v-cloak class="flex h-full print:block">
     
     <!-- Offline Indicator Banner -->
@@ -117,21 +117,25 @@
        </div>
     </div>
 
-    <!-- Lively Sidebar -->
-    <div v-if="isLoggedIn" class="w-72 bg-gradient-to-b from-slate-900 via-blue-900 to-blue-950 text-white flex-col shadow-2xl z-10 hidden md:flex print:hidden relative overflow-hidden">
+    <!-- Lively Sidebar (Desktop) -->
+    <div v-if="isLoggedIn" class="w-72 bg-gradient-to-b from-slate-900 via-blue-900 to-blue-950 text-white flex-col shadow-2xl z-10 hidden md:flex print:hidden relative overflow-hidden shrink-0">
       <!-- Decorative sidebar shapes -->
       <div class="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl pointer-events-none -mt-10 -mr-10"></div>
       
-      <div :class="['p-8 font-extrabold text-3xl tracking-wider flex items-center gap-3 border-b border-blue-500/20 relative z-10 drop-shadow-md', isOffline ? 'mt-10' : '']">
+      <div :class="['p-8 font-extrabold text-3xl tracking-wider flex items-center gap-3 border-b border-blue-500/20 relative z-10 drop-shadow-md shrink-0', isOffline ? 'mt-10' : '']">
         📸 <span class="bg-clip-text text-transparent bg-gradient-to-r from-white to-cyan-200">ScanMaster</span>
       </div>
-      <nav class="flex-1 py-6 space-y-2 relative z-10">
+      
+      <!-- Added overflow-y-auto to allow scrolling navigation items if screen is small -->
+      <nav class="flex-1 py-6 space-y-2 relative z-10 overflow-y-auto overscroll-contain">
         <button @click="activeTab = 'classes'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'classes' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">👥 Sections & Students</button>
         <button @click="activeTab = 'quizzes'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'quizzes' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📝 Quizzes & Keys</button>
         <button @click="activeTab = 'scanner'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'scanner' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📷 Live Scanner</button>
         <button @click="activeTab = 'analytics'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'analytics' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📊 Analytics</button>
       </nav>
-      <div class="p-6 border-t border-blue-500/20 bg-black/20 relative z-10 backdrop-blur-md">
+      
+      <!-- Added shrink-0 to ensure the sign-out button is ALWAYS visible -->
+      <div class="p-6 border-t border-blue-500/20 bg-black/20 relative z-10 backdrop-blur-md shrink-0">
          <div class="text-sm font-bold text-white mb-2 flex items-center gap-2">
             <span class="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(52,211,153,1)]" :class="isOffline ? 'bg-amber-400 shadow-amber-400' : 'bg-emerald-400'"></span> 
             {{ authUser }}
@@ -166,13 +170,15 @@
       </div>
 
       <!-- Main Scrollable Area -->
-      <div :class="['flex-1 overflow-auto p-4 md:p-8 print:p-0 transition-all', isOffline ? 'pt-28 md:pt-16' : 'pt-24 md:pt-8']">
+      <div :class="['flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-8 print:p-0 transition-all w-full overscroll-contain', isOffline ? 'pt-28 md:pt-16' : 'pt-24 md:pt-8']">
 
         <!-- CLASSES TAB -->
         <div v-show="activeTab === 'classes'" class="flex flex-col h-full print:hidden">
-          <div class="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+          <div class="flex flex-col lg:flex-row gap-6 flex-1 lg:min-h-0">
+            
             <!-- Sections Panel -->
-            <div class="w-full lg:w-1/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white h-[300px] lg:h-full overflow-hidden flex flex-col">
+            <!-- Adjusted height to explicitly stack and scroll on mobile, flex internally on desktop -->
+            <div class="w-full lg:w-1/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white h-[350px] lg:h-full overflow-hidden flex flex-col shrink-0 lg:shrink">
               <div class="flex flex-wrap justify-between items-center mb-6 gap-2">
                 <h2 class="text-2xl font-extrabold text-slate-800">Sections</h2>
                 <button v-if="classQueue.length > 0" @click="saveClasses" :disabled="isSavingClasses" class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 animate-pulse transition">
@@ -183,7 +189,6 @@
                 <input v-model="newClassName" @keyup.enter="addClass" type="text" placeholder="New Section Name" class="flex-1 w-full border-none shadow-inner bg-slate-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 transition font-medium text-slate-700">
                 <button @click="addClass" class="bg-gradient-to-br from-blue-600 to-cyan-500 text-white px-5 py-3 rounded-xl font-bold hover:shadow-lg transform hover:-translate-y-0.5 transition-all text-xl w-full md:w-auto shrink-0">+</button>
               </div>
-              <!-- Added explicit overscroll-contain and overflow-auto to prevent mobile body scroll -->
               <ul class="space-y-3 flex-1 overflow-auto pr-2 overscroll-contain">
                 <li v-for="cls in classes" :key="cls.ClassID" @click="selectedClass = cls.ClassID" :class="['flex justify-between items-center p-4 rounded-2xl cursor-pointer border-2 transition-all font-bold', selectedClass === cls.ClassID ? 'bg-blue-50 border-blue-400 text-blue-900 shadow-md transform scale-[1.02]' : 'bg-white border-transparent hover:border-blue-200 text-slate-600 shadow-sm']">
                   <span class="truncate pr-2">{{ cls.ClassName }}</span>
@@ -193,7 +198,8 @@
             </div>
 
             <!-- Students Panel -->
-            <div class="w-full lg:w-2/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white flex flex-col h-[450px] lg:h-full overflow-hidden">
+            <!-- Adjusted height to explicitly stack and scroll on mobile, flex internally on desktop -->
+            <div class="w-full lg:w-2/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white flex flex-col h-[600px] lg:h-full overflow-hidden shrink-0 lg:shrink">
               <div v-if="selectedClass" class="h-full flex flex-col min-h-0">
                  <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4 border-b border-slate-200 pb-4 shrink-0">
                    <h2 class="text-2xl font-extrabold text-slate-800">Learners</h2>
@@ -227,7 +233,6 @@
                  </div>
 
                  <div class="overflow-hidden bg-white rounded-2xl border border-slate-100 shadow-inner flex-1 flex flex-col min-h-0">
-                   <!-- Changed from overflow-x-auto to overflow-auto and added overscroll-contain for smooth multidirectional scrolling -->
                    <div class="overflow-auto flex-1 w-full overscroll-contain">
                      <table class="w-full text-left text-sm relative whitespace-nowrap">
                        <thead class="bg-slate-100/80 sticky top-0 z-10 backdrop-blur-sm shadow-sm">
@@ -260,14 +265,14 @@
             </div>
           </div>
           <!-- Powered by PVNJ Footer -->
-          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Powered by: PVNJ</div>
+          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm pb-4">Powered by: PVNJ</div>
         </div>
 
         <!-- QUIZZES TAB -->
         <div v-show="activeTab === 'quizzes'" class="flex flex-col h-full print:hidden">
-          <div class="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+          <div class="flex flex-col lg:flex-row gap-6 flex-1 lg:min-h-0">
             <!-- Quizzes Panel -->
-            <div class="w-full lg:w-1/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white h-[300px] lg:h-full overflow-hidden flex flex-col">
+            <div class="w-full lg:w-1/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white h-[350px] lg:h-full overflow-hidden flex flex-col shrink-0 lg:shrink">
               <div class="flex flex-wrap justify-between items-center mb-6 gap-2">
                 <h2 class="text-2xl font-extrabold text-slate-800">Quizzes</h2>
                 <button v-if="quizQueue.length > 0" @click="saveQuizzes" :disabled="isSavingQuizzes" class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 animate-pulse transition">
@@ -287,9 +292,8 @@
             </div>
 
             <!-- Answer Key Panel -->
-            <div class="w-full lg:w-2/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white flex flex-col h-[500px] lg:h-full overflow-hidden">
+            <div class="w-full lg:w-2/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white flex flex-col h-[600px] lg:h-full overflow-hidden shrink-0 lg:shrink">
               <div v-if="selectedQuizData" class="flex flex-col h-full min-h-0">
-                
                 <!-- Flexible Editable Quiz Header -->
                 <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4 border-b border-slate-200 pb-4 shrink-0">
                   <div class="flex-1 w-full group">
@@ -318,7 +322,7 @@
                     <div class="w-16 md:w-20"></div>
                 </div>
 
-                <!-- Flexible Syntax Questions List with Expandable Editor -->
+                <!-- Flexible Syntax Questions List -->
                 <div class="flex-1 overflow-auto space-y-4 pr-1 md:pr-2 pb-4 overscroll-contain min-h-0">
                   <div v-for="(q, idx) in selectedQuizData.Questions" :key="q.id" class="flex flex-col bg-white p-3 md:p-4 rounded-2xl border-2 border-slate-100 shadow-sm hover:border-blue-300 hover:shadow-md transition-all duration-300">
                     <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 md:gap-4">
@@ -334,7 +338,7 @@
                       <button @click="removeQuestion(idx)" class="text-rose-400 font-bold hover:text-white hover:bg-rose-500 w-10 h-10 rounded-xl flex items-center justify-center transition-colors text-xl shrink-0" title="Remove Item">&times;</button>
                     </div>
 
-                    <!-- Expanded Content Editor (Dynamic Options Encoding) -->
+                    <!-- Expanded Content Editor -->
                     <div v-if="q.showDetails" class="mt-4 pt-4 border-t-2 border-dashed border-slate-200 grid gap-3 animate-fade-in">
                        <textarea v-model="q.qText" @input="markKeyUnsaved" placeholder="Type the actual question here (Optional)..." class="w-full border-none bg-blue-50/50 shadow-inner p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium text-slate-800" rows="2"></textarea>
                        
@@ -344,7 +348,6 @@
                            <input v-model="opt.text" @input="markKeyUnsaved" :placeholder="'Choice ' + opt.label" class="flex-1 border-none bg-transparent outline-none text-slate-700 w-full min-w-0">
                            <button @click="removeChoice(q, oIdx)" class="text-slate-300 hover:text-rose-500 font-black px-2 text-xl" title="Delete Choice">&times;</button>
                          </div>
-                         <!-- Add Dynamic Choice Button -->
                          <button @click="addChoice(q)" class="flex items-center justify-center gap-2 bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 border-2 border-dashed border-slate-200 hover:border-blue-300 rounded-xl p-2 transition-all font-bold w-full h-full min-h-[44px]">
                            <span class="text-lg leading-none">+</span> Add Choice
                          </button>
@@ -361,7 +364,7 @@
             </div>
           </div>
           <!-- Powered by PVNJ Footer -->
-          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Powered by: PVNJ</div>
+          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm pb-4">Powered by: PVNJ</div>
         </div>
 
         <!-- SCANNER TAB -->
@@ -400,10 +403,10 @@
               </div>
             </div>
 
-            <div v-else class="flex flex-col lg:flex-row gap-6 h-full overflow-hidden">
+            <!-- Enhanced responsive wrapping logic for camera + projection -->
+            <div v-else class="flex flex-col lg:flex-row gap-6 flex-1 lg:min-h-0 lg:h-full lg:overflow-hidden">
               <!-- Camera Feed Side -->
-              <div class="w-full lg:w-1/2 bg-slate-900 rounded-[2rem] overflow-hidden shadow-2xl relative flex flex-col border-4 border-slate-800 h-[450px] lg:h-full">
-                
+              <div class="w-full lg:w-1/2 bg-slate-900 rounded-[2rem] overflow-hidden shadow-2xl relative flex flex-col border-4 border-slate-800 h-[450px] lg:h-full shrink-0 lg:shrink">
                 <div class="bg-slate-900/90 backdrop-blur-md text-white p-4 md:p-5 flex justify-between items-center z-10 border-b border-slate-800/50 relative shrink-0">
                   <button @click="qIndex = Math.max(0, qIndex-1)" :disabled="qIndex === 0" class="bg-slate-800 px-4 md:px-5 py-2 md:py-3 rounded-xl font-bold hover:bg-slate-700 disabled:opacity-30 transition shadow-inner">Prev</button>
                   <div class="text-center">
@@ -417,7 +420,6 @@
                    <video ref="video" class="absolute inset-0 w-full h-full object-cover opacity-0 z-0" playsinline muted></video>
                    <canvas ref="canvas" class="absolute inset-0 w-full h-full object-cover z-10"></canvas>
                    
-                   <!-- Scanner Targeting Frame overlay -->
                    <div v-if="isCapturing" class="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
                       <div class="w-48 h-48 md:w-64 md:h-64 border border-white/20 rounded-[2rem] relative shadow-[0_0_50px_rgba(56,189,248,0.2)]">
                          <div class="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-cyan-400 rounded-tl-2xl"></div>
@@ -427,7 +429,6 @@
                       </div>
                    </div>
 
-                   <!-- Overlay message when paused -->
                    <div v-if="!isCapturing" class="absolute inset-0 z-20 pointer-events-none flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
                       <div class="text-white font-bold text-xl md:text-2xl flex flex-col items-center gap-4 bg-slate-800/80 p-6 md:p-8 rounded-3xl border border-slate-700 shadow-2xl">
                          <span class="text-4xl md:text-5xl">⏸</span>
@@ -436,7 +437,6 @@
                    </div>
                 </div>
 
-                <!-- Enhanced Capture & Control Buttons -->
                 <div class="bg-slate-900/90 backdrop-blur-md p-4 md:p-5 z-10 text-center border-t border-slate-800/50 flex flex-wrap justify-center gap-2 md:gap-3 relative shrink-0">
                    <button @click="isCapturing = !isCapturing" :class="isCapturing ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 hover:from-amber-500 hover:to-orange-600' : 'bg-gradient-to-r from-emerald-400 to-green-500 text-white hover:from-emerald-500 hover:to-green-600'" class="px-4 md:px-6 py-3 md:py-4 rounded-xl font-extrabold transition-all shadow-lg flex-1 md:flex-none flex justify-center items-center gap-2 transform hover:-translate-y-1">
                       <span v-if="!isCapturing" class="text-sm md:text-lg">▶️ Start Capturing</span>
@@ -452,7 +452,7 @@
               </div>
 
               <!-- Live Projection Box -->
-              <div class="w-full lg:w-1/2 bg-white/90 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white flex flex-col overflow-hidden h-[500px] lg:h-full">
+              <div class="w-full lg:w-1/2 bg-white/90 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white flex flex-col overflow-hidden h-[500px] lg:h-full shrink-0 lg:shrink">
                 <div class="bg-white text-slate-800 p-4 md:p-5 font-bold flex justify-between items-center shadow-sm z-10 flex-wrap gap-4 border-b border-slate-100 shrink-0">
                   <span class="flex items-center gap-2 md:gap-3 text-base md:text-lg font-extrabold text-slate-800">
                      <span class="w-3 h-3 rounded-full" :class="isCapturing ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,1)] animate-pulse' : 'bg-amber-400'"></span> 
@@ -462,18 +462,14 @@
                      </button>
                   </span>
                   
-                  <!-- Toggle to show/hide the encoded question content -->
                   <label class="flex items-center gap-2 text-xs font-bold cursor-pointer bg-slate-100 px-3 md:px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-200 transition border border-slate-200 shadow-inner">
                      <input type="checkbox" v-model="projectQuestion" class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500">
                      Show Question
                   </label>
                 </div>
 
-                <!-- In-App Colorful Question Preview with dynamic options -->
                 <div v-if="projectQuestion && activeQuizData.Questions[qIndex] && (activeQuizData.Questions[qIndex].qText || activeQuizData.Questions[qIndex].options.some(o => o.text))" class="p-5 md:p-6 bg-gradient-to-br from-blue-700 via-blue-800 to-slate-900 text-white flex-shrink-0 shadow-inner border-b border-white/20 relative overflow-hidden flex flex-col max-h-[50%]">
-                   <!-- Decorative elements -->
                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none -mt-10 -mr-10"></div>
-                   
                    <p class="font-extrabold text-lg md:text-xl mb-4 drop-shadow-md leading-tight overflow-auto shrink-0 max-h-[30%] overscroll-contain">{{ activeQuizData.Questions[qIndex].qText || 'Context not provided.' }}</p>
                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs md:text-sm font-medium overflow-auto overscroll-contain pb-2">
                       <div v-for="(opt, oIdx) in activeQuizData.Questions[qIndex].options" :key="oIdx" v-show="opt.text" class="bg-white/10 backdrop-blur-md p-2.5 rounded-xl border border-white/20 shadow-sm flex items-center overflow-hidden shrink-0">
@@ -483,7 +479,6 @@
                    </div>
                 </div>
 
-                <!-- Student Grid -->
                 <div class="flex-1 p-4 md:p-5 overflow-auto bg-slate-50/50 grid grid-cols-2 md:grid-cols-3 gap-3 content-start overscroll-contain min-h-0">
                    <div v-for="s in currentScanStudents" :key="s.StudentID" 
                         :class="['p-3 md:p-4 rounded-2xl border-2 flex justify-between items-center transition-all duration-300 font-bold text-sm md:text-base',
@@ -499,7 +494,7 @@
             </div>
           </div>
           <!-- Powered by PVNJ Footer -->
-          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Powered by: PVNJ</div>
+          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm pb-4">Powered by: PVNJ</div>
         </div>
 
         <!-- ANALYTICS TAB -->
@@ -533,7 +528,7 @@
                  </div>
                </div>
 
-               <!-- Item Analysis Table (Dynamically Spanned options) -->
+               <!-- Item Analysis Table -->
                <div class="bg-white/90 backdrop-blur-xl p-5 md:p-8 rounded-[2rem] border border-white shadow-xl flex flex-col max-h-[600px] lg:max-h-none shrink-0">
                  <h3 class="font-extrabold text-xl md:text-2xl mb-4 md:mb-6 text-slate-800 shrink-0">Item Analysis (Raw Scans)</h3>
                  <div class="overflow-auto rounded-2xl border border-slate-100 w-full flex-1 overscroll-contain min-h-0">
@@ -543,7 +538,6 @@
                           <th class="p-4 md:p-5 w-20 md:w-24 font-black text-slate-400 uppercase tracking-wider">Item</th>
                           <th class="p-4 md:p-5 w-16 md:w-20 font-black text-slate-400 uppercase tracking-wider text-center">Key</th>
                           <th class="p-4 md:p-5 font-black text-slate-400 uppercase tracking-wider">Correct %</th>
-                          <!-- Dynamic Analysis Column Headers based on Max Choices -->
                           <th v-for="(lbl, i) in analyticsStats.analysisHeaders" :key="lbl" class="p-4 md:p-5 text-center font-black uppercase tracking-wider" :class="getOptStyles(i).text + ' ' + getOptStyles(i).bg">
                              {{ lbl }} (n)
                           </th>
@@ -561,7 +555,6 @@
                              <span class="text-sm md:text-base" :class="item.diff >= 70 ? 'text-emerald-600' : item.diff >= 40 ? 'text-amber-600' : 'text-rose-600'">{{ item.diff }}%</span>
                            </div>
                          </td>
-                         <!-- Dynamic Count Values -->
                          <td v-for="(lbl, colIdx) in analyticsStats.analysisHeaders" :key="lbl" class="p-4 md:p-5 text-center font-black text-base md:text-lg" :class="getOptStyles(colIdx).text">
                            <span class="px-3 py-1 rounded-lg bg-opacity-40" :class="getOptStyles(colIdx).bg.replace('100', '50')">{{ item.counts[lbl] || 0 }}</span>
                          </td>
@@ -577,7 +570,7 @@
             </div>
           </div>
           <!-- Powered by PVNJ Footer -->
-          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Powered by: PVNJ</div>
+          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm pb-4">Powered by: PVNJ</div>
         </div>
         
       </div> <!-- End Scrollable Content -->
@@ -669,9 +662,9 @@
         let stream = null;
         let scanRaf = null;
         const lastScanMap = {};
-        const isCapturing = ref(false); // Controls if the scanner processes QR frames
-        const liveSessionResults = ref([]); // reactive UI updates for current session
-        const projectQuestion = ref(true); // Controls if the question is projected
+        const isCapturing = ref(false); 
+        const liveSessionResults = ref([]); 
+        const projectQuestion = ref(true); 
 
         // API Helper for Fetching
         const apiCall = async (action, payload = null) => {
@@ -712,7 +705,6 @@
 
           } catch(e) {
             console.error('API Error:', e);
-            // Catch network fetch failures indicating offline status mid-flight
             isOffline.value = !navigator.onLine;
             if (isOffline.value) return { status: 'offline_queued' };
             return { error: "Network Error: Could not connect to Google Server.\nDetails: " + e.message };
@@ -750,7 +742,7 @@
               isLoggedIn.value = true;
               localStorage.setItem('ScanMaster_User', authUser.value);
               localStorage.setItem('ScanMaster_Pass', authPass.value);
-              loadDatabase(); // Pull data for just this user
+              loadDatabase(); 
            } else {
               authError.value = res?.error || "Authentication failed.";
               isLoading.value = false;
@@ -779,7 +771,6 @@
            
            areQuizzesLoaded.value = false; 
 
-           // Clear local caches upon logout for security
            localStorage.removeItem('ScanMaster_Cache_Classes');
            localStorage.removeItem('ScanMaster_Cache_Students');
            localStorage.removeItem('ScanMaster_Cache_Quizzes');
@@ -796,7 +787,6 @@
            }
         };
 
-        // Deep Watchers for Offline Persistence
         const persistLocalData = () => {
             if (!isLoggedIn.value) return;
             localStorage.setItem('ScanMaster_Cache_Classes', JSON.stringify(classes.value));
@@ -816,7 +806,6 @@
         watch([classes, students, quizzes, results], persistLocalData, { deep: true });
         watch([classQueue, studentQueue, quizQueue, localScans, unsavedKeysMap], persistQueues, { deep: true });
 
-        // Automatic DB Data Format Upgrader for Quizzes
         const migrateQuizData = (quizzesList) => {
             quizzesList.forEach(quiz => {
                 quiz.Questions.forEach(q => {
@@ -837,7 +826,6 @@
           if (!isLoggedIn.value) return;
           isLoading.value = true;
           
-          // 1. Immediately Load from Local Cache (Offline First behavior)
           try {
              const cClasses = localStorage.getItem('ScanMaster_Cache_Classes');
              if (cClasses) classes.value = JSON.parse(cClasses);
@@ -848,7 +836,6 @@
              const cResults = localStorage.getItem('ScanMaster_Cache_Results');
              if (cResults) results.value = JSON.parse(cResults);
              
-             // Restore Queues
              const qClasses = localStorage.getItem('ScanMaster_Queue_Classes');
              if (qClasses) classQueue.value = JSON.parse(qClasses);
              const qStudents = localStorage.getItem('ScanMaster_Queue_Students');
@@ -867,7 +854,6 @@
               return;
           }
 
-          // 2. Fetch fresh data from DB if Online
           try {
             const data = await apiCall('getData');
             
@@ -876,16 +862,13 @@
             
             classes.value = data.classes || [];
             students.value = data.students || [];
-            // Preserve the unsynced local results so they aren't hidden before syncing
             results.value = [...(data.results || []), ...localScans.value];
             
             if (syncInterval) clearInterval(syncInterval);
             
-            // Start robust background sync loop
             syncInterval = setInterval(async () => {
               if (isOffline.value) return;
 
-              // Sync Scans
               if (localScans.value.length > 0) {
                  const batch = [...localScans.value];
                  const res = await apiCall('recordScans', { scans: batch });
@@ -894,7 +877,6 @@
                  }
               }
 
-              // Auto-sync other queues continuously
               if (classQueue.value.length > 0 && !isSavingClasses.value) saveClasses();
               if (studentQueue.value.length > 0 && !isSavingStudents.value) saveStudents();
               if (quizQueue.value.length > 0 && !isSavingQuizzes.value) saveQuizzes();
@@ -943,6 +925,24 @@
         onMounted(() => {
           window.addEventListener('online', () => isOffline.value = false);
           window.addEventListener('offline', () => isOffline.value = true);
+
+          // REAL-TIME CROSS-TAB SYNC LISTENER
+          // Actively updates the application interface when a second tab changes local storage data.
+          window.addEventListener('storage', (e) => {
+             if (!isLoggedIn.value) return;
+             try {
+                if (e.key === 'ScanMaster_Cache_Classes' && e.newValue) classes.value = JSON.parse(e.newValue);
+                if (e.key === 'ScanMaster_Cache_Students' && e.newValue) students.value = JSON.parse(e.newValue);
+                if (e.key === 'ScanMaster_Cache_Quizzes' && e.newValue) quizzes.value = JSON.parse(e.newValue);
+                if (e.key === 'ScanMaster_Cache_Results' && e.newValue) results.value = JSON.parse(e.newValue);
+                
+                // Keep queues in sync so duplicate background saves don't occur across browser views
+                if (e.key === 'ScanMaster_Queue_Scans' && e.newValue) localScans.value = JSON.parse(e.newValue);
+                if (e.key === 'ScanMaster_Queue_Classes' && e.newValue) classQueue.value = JSON.parse(e.newValue);
+                if (e.key === 'ScanMaster_Queue_Students' && e.newValue) studentQueue.value = JSON.parse(e.newValue);
+                if (e.key === 'ScanMaster_Queue_Quizzes' && e.newValue) quizQueue.value = JSON.parse(e.newValue);
+             } catch(err) { console.error("Cross-tab sync error", err); }
+          });
 
           if (gasUrl.value && authUser.value && authPass.value) {
              authenticate();
@@ -1263,7 +1263,7 @@
            root.innerHTML = html;
         };
 
-        // --- SCANNER BEHAVIOR (Continued) ---
+        // --- SCANNER BEHAVIOR ---
         const activeQuizData = computed(() => quizzes.value.find(q => q.QuizID === scanQuiz.value));
         const activeQuestionKey = computed(() => activeQuizData.value?.Questions[qIndex.value]?.answer);
         const currentScanStudents = computed(() => students.value.filter(s => s.ClassID === scanClass.value).sort((a,b)=>a.RosterNumber - b.RosterNumber));
@@ -1389,7 +1389,6 @@
                             liveSessionResults.value = liveSessionResults.value.filter(r => !(r.studentId === studentId && r.qNum === (qIndex.value+1)));
                             liveSessionResults.value.push(payload);
                             
-                            // Push directly into results.value so it works in analytics instantly even if offline
                             results.value.push(payload);
                             localScans.value.push(payload);
                             lastScanMap[studentId] = now;
