@@ -1,7 +1,7 @@
-const CACHE_NAME = 'scanmaster-pwa-v5'; // Bumped up to forcefully overwrite the old cached bugs!
+const CACHE_NAME = 'scanmaster-pwa-v6'; // Bumped version to force cache refresh
 const ASSETS_TO_CACHE = [
   './',
-  './index.html', // Fixed filename casing
+  './index.html', 
   'https://unpkg.com/vue@3/dist/vue.global.prod.js',
   'https://cdn.tailwindcss.com',
   'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'
@@ -43,7 +43,6 @@ self.addEventListener('fetch', (event) => {
         return cachedResponse;
       }
       return fetch(event.request).then((networkResponse) => {
-        // Optionally cache new resources here if desired
         return networkResponse;
       }).catch(() => {
         // If both cache and network fail (offline)
