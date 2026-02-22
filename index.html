@@ -503,6 +503,19 @@
         const selectedQuiz = ref('');
         const cameraBlocked = ref(false);
 
+        // SCANNER STATE - MUST BE DECLARED BEFORE WATCHERS/COMPUTED
+        const scanClass = ref('');
+        const scanQuiz = ref('');
+        const activeSessionId = ref('');
+        const qIndex = ref(0);
+        const video = ref(null);
+        const canvas = ref(null);
+        let stream = null;
+        let scanRaf = null;
+        const lastScanMap = {};
+        const isCapturing = ref(false); // Controls if the scanner processes QR frames
+        const liveSessionResults = ref([]); // reactive UI updates for current session
+
         // API Helper for Fetching
         const apiCall = async (action, payload = null) => {
           if (!gasUrl.value) return null;
@@ -915,28 +928,15 @@
            root.innerHTML = html;
         };
 
+        // --- SCANNER BEHAVIOR (Continued) ---
+        const activeQuizData = computed(() => quizzes.value.find(q => q.QuizID === scanQuiz.value));
+        const activeQuestionKey = computed(() => activeQuizData.value?.Questions[qIndex.value]?.answer);
+        const currentScanStudents = computed(() => students.value.filter(s => s.ClassID === scanClass.value).sort((a,b)=>a.RosterNumber - b.RosterNumber));
+
         // Keep the external window synchronized with internal scanner variables
         watch([liveSessionResults, qIndex, isCapturing, currentScanStudents], () => {
            renderProjection();
         }, { deep: true });
-
-        // --- SCANNER ---
-        const scanClass = ref('');
-        const scanQuiz = ref('');
-        const activeSessionId = ref('');
-        const qIndex = ref(0);
-        const video = ref(null);
-        const canvas = ref(null);
-        let stream = null;
-        let scanRaf = null;
-        const lastScanMap = {};
-        const isCapturing = ref(false); // Controls if the scanner processes QR frames
-
-        const activeQuizData = computed(() => quizzes.value.find(q => q.QuizID === scanQuiz.value));
-        const activeQuestionKey = computed(() => activeQuizData.value?.Questions[qIndex.value]?.answer);
-        const currentScanStudents = computed(() => students.value.filter(s => s.ClassID === scanClass.value).sort((a,b)=>a.RosterNumber - b.RosterNumber));
-        
-        const liveSessionResults = ref([]); // reactive UI updates for current session
 
         const getStudentResult = (studentId) => {
           const res = liveSessionResults.value.find(r => r.studentId === studentId && r.qNum === (qIndex.value+1));
