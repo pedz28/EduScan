@@ -622,7 +622,7 @@
   </div>
 
   <script>
-    const { createApp, ref, computed, onMounted, watch } = Vue;
+    const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
 
     createApp({
       setup() {
@@ -1389,6 +1389,9 @@
            liveSessionResults.value = [];
            cameraBlocked.value = false;
            isCapturing.value = false; 
+
+           // Wait for Vue to update the DOM so the <video> element exists
+           await nextTick();
 
            try {
              if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
