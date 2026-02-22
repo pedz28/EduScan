@@ -189,7 +189,7 @@
                 <input v-model="newClassName" @keyup.enter="addClass" type="text" placeholder="New Section Name" class="flex-1 w-full border-none shadow-inner bg-slate-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 transition font-medium text-slate-700">
                 <button @click="addClass" class="bg-gradient-to-br from-blue-600 to-cyan-500 text-white px-5 py-3 rounded-xl font-bold hover:shadow-lg transform hover:-translate-y-0.5 transition-all text-xl w-full md:w-auto shrink-0">+</button>
               </div>
-              <ul class="space-y-3 flex-1 overflow-auto pr-2 overscroll-contain">
+              <ul class="space-y-3 flex-1 overflow-y-auto pr-2 overscroll-contain min-h-0">
                 <li v-for="cls in classes" :key="cls.ClassID" @click="selectedClass = cls.ClassID" :class="['flex justify-between items-center p-4 rounded-2xl cursor-pointer border-2 transition-all font-bold', selectedClass === cls.ClassID ? 'bg-blue-50 border-blue-400 text-blue-900 shadow-md transform scale-[1.02]' : 'bg-white border-transparent hover:border-blue-200 text-slate-600 shadow-sm']">
                   <span class="truncate pr-2">{{ cls.ClassName }}</span>
                   <button @click.stop="deleteClass(cls.ClassID)" class="text-rose-400 hover:text-white hover:bg-rose-500 w-8 h-8 rounded-full flex shrink-0 items-center justify-center transition-colors">&times;</button>
@@ -283,7 +283,7 @@
                 <input v-model="newQuizName" @keyup.enter="addQuiz" type="text" placeholder="New Quiz Name" class="flex-1 w-full border-none shadow-inner bg-slate-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 transition font-medium text-slate-700">
                 <button @click="addQuiz" class="bg-gradient-to-br from-blue-600 to-cyan-500 text-white px-5 py-3 rounded-xl font-bold hover:shadow-lg transform hover:-translate-y-0.5 transition-all text-xl w-full md:w-auto shrink-0">+</button>
               </div>
-              <ul class="space-y-3 flex-1 overflow-auto pr-2 overscroll-contain">
+              <ul class="space-y-3 flex-1 overflow-y-auto pr-2 overscroll-contain min-h-0">
                 <li v-for="q in quizzes" :key="q.QuizID" @click="selectedQuiz = q.QuizID" :class="['flex justify-between items-center p-4 rounded-2xl cursor-pointer border-2 transition-all font-bold', selectedQuiz === q.QuizID ? 'bg-blue-50 border-blue-400 text-blue-900 shadow-md transform scale-[1.02]' : 'bg-white border-transparent hover:border-blue-200 text-slate-600 shadow-sm']">
                   <span class="truncate pr-2">{{ q.QuizName || 'Untitled Quiz' }}</span>
                   <button @click.stop="deleteQuiz(q.QuizID)" class="text-rose-400 hover:text-white hover:bg-rose-500 w-8 h-8 rounded-full flex shrink-0 items-center justify-center transition-colors">&times;</button>
