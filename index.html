@@ -142,6 +142,10 @@
          </div>
          <div class="flex flex-col gap-3 mt-5">
            <!-- Increased min height to 48px (~0.5 inches) and padding for large clickable area -->
+           <button @click="globalSave" class="text-base p-4 min-h-[48px] bg-white/5 border border-white/10 rounded-xl text-blue-200 hover:text-white hover:bg-blue-500/20 font-bold w-full text-left transition flex items-center gap-3 shadow-sm relative">
+             💾 Save Changes
+             <span v-if="hasPendingSaves" class="absolute top-4 right-4 w-3 h-3 bg-rose-500 rounded-full border border-slate-900 animate-pulse"></span>
+           </button>
            <button @click="forceSync" class="text-base p-4 min-h-[48px] bg-white/5 border border-white/10 rounded-xl text-emerald-300 hover:text-white hover:bg-emerald-500/20 font-bold w-full text-left transition flex items-center gap-3 shadow-sm">🔄 Sync Data</button>
            <button @click="logout" class="text-base p-4 min-h-[48px] bg-white/5 border border-white/10 rounded-xl text-rose-300 hover:text-white hover:bg-rose-500/20 font-bold w-full text-left transition flex items-center gap-3 shadow-sm">🚪 Sign Out</button>
          </div>
@@ -159,6 +163,10 @@
           <option value="analytics" class="text-slate-800">Analytics</option>
         </select>
         <!-- Buttons are 48x48px (min-h-[48px] w-12 h-12) to comfortably exceed 0.25 inches -->
+        <button @click="globalSave" class="relative text-2xl w-12 h-12 min-w-[48px] min-h-[48px] flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl transition-all active:scale-95" title="Save Changes">
+          💾
+          <span v-if="hasPendingSaves" class="absolute top-2 right-2 w-3 h-3 bg-rose-500 rounded-full border border-slate-900 animate-pulse"></span>
+        </button>
         <button @click="forceSync" class="text-2xl w-12 h-12 min-w-[48px] min-h-[48px] flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl transition-all active:scale-95" title="Sync Data">🔄</button>
         <button @click="logout" class="text-2xl w-12 h-12 min-w-[48px] min-h-[48px] flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl transition-all active:scale-95" title="Sign Out">🚪</button>
       </div>
@@ -183,13 +191,9 @@
           <div class="flex flex-col lg:flex-row gap-6 flex-1 lg:min-h-0">
             
             <!-- Sections Panel -->
-            <!-- Adjusted height to explicitly stack and scroll on mobile, flex internally on desktop -->
             <div class="w-full lg:w-1/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white h-[350px] lg:h-full overflow-hidden flex flex-col shrink-0 lg:shrink">
               <div class="flex flex-wrap justify-between items-center mb-6 gap-2">
                 <h2 class="text-2xl font-extrabold text-slate-800">Sections</h2>
-                <button v-if="classQueue.length > 0" @click="saveClasses" :disabled="isSavingClasses" class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 animate-pulse transition">
-                  {{ isSavingClasses ? 'Saving...' : '💾 Save' }}
-                </button>
               </div>
               <div class="flex flex-wrap md:flex-nowrap gap-2 mb-6">
                 <input v-model="newClassName" @keyup.enter="addClass" type="text" placeholder="New Section Name" class="flex-1 w-full border-none shadow-inner bg-slate-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 transition font-medium text-slate-700">
@@ -204,15 +208,11 @@
             </div>
 
             <!-- Students Panel -->
-            <!-- Adjusted height to explicitly stack and scroll on mobile, flex internally on desktop -->
             <div class="w-full lg:w-2/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white flex flex-col h-[600px] lg:h-full overflow-hidden shrink-0 lg:shrink">
               <div v-if="selectedClass" class="h-full flex flex-col min-h-0">
                  <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4 border-b border-slate-200 pb-4 shrink-0">
                    <h2 class="text-2xl font-extrabold text-slate-800">Learners</h2>
                    <div class="flex flex-wrap items-center gap-3">
-                     <button v-if="studentQueue.length > 0" @click="saveStudents" :disabled="isSavingStudents" class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 animate-pulse transition">
-                       {{ isSavingStudents ? 'Saving...' : '💾 Save Students' }}
-                     </button>
                      <button @click="printQRs" class="bg-slate-800 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-slate-700 shadow-lg flex items-center gap-2 transform hover:-translate-y-0.5 transition-all">
                        <span>🖨️</span> Print QR Cards
                      </button>
@@ -281,9 +281,6 @@
             <div class="w-full lg:w-1/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white h-[350px] lg:h-full overflow-hidden flex flex-col shrink-0 lg:shrink">
               <div class="flex flex-wrap justify-between items-center mb-6 gap-2">
                 <h2 class="text-2xl font-extrabold text-slate-800">Quizzes</h2>
-                <button v-if="quizQueue.length > 0" @click="saveQuizzes" :disabled="isSavingQuizzes" class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 animate-pulse transition">
-                  {{ isSavingQuizzes ? 'Saving...' : '💾 Save Quizzes' }}
-                </button>
               </div>
               <div class="flex flex-wrap md:flex-nowrap gap-2 mb-6">
                 <input v-model="newQuizName" @keyup.enter="addQuiz" type="text" placeholder="New Quiz Name" class="flex-1 w-full border-none shadow-inner bg-slate-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 transition font-medium text-slate-700">
@@ -312,9 +309,6 @@
                     >
                   </div>
                   <div class="flex flex-wrap gap-3 shrink-0 mt-2 md:mt-0">
-                    <button v-if="hasUnsavedKey" @click="saveQuizKey" :disabled="isSavingKey" class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-50 animate-pulse transition">
-                      {{ isSavingKey ? 'Saving...' : '💾 Save Key' }}
-                    </button>
                     <button @click="addQuestion" class="bg-blue-100 text-blue-800 px-5 py-2.5 rounded-xl text-sm font-black hover:bg-blue-200 hover:shadow-md transform hover:-translate-y-0.5 transition-all flex items-center gap-2">
                       <span class="text-lg">+</span> Add Item
                     </button>
@@ -520,7 +514,7 @@
               </button>
             </div>
 
-            <div v-if="analyticsStats" class="flex-1 overflow-auto space-y-6 md:space-y-8 pb-12 pr-1 md:pr-2 overscroll-contain">
+            <div v-if="analyticsStats" class="flex-1 overflow-auto space-y-6 md:space-y-8 pb-12 pr-1 md:pr-2 overscroll-contain flex flex-col">
                <!-- Stats Summary -->
                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 shrink-0">
                  <div class="bg-gradient-to-br from-blue-600 to-blue-800 p-6 md:p-8 rounded-[2rem] border border-white/20 text-center shadow-xl text-white relative overflow-hidden transform hover:-translate-y-1 transition-all">
@@ -541,7 +535,7 @@
                </div>
 
                <!-- Item Analysis Table -->
-               <div class="bg-white/90 backdrop-blur-xl p-5 md:p-8 rounded-[2rem] border border-white shadow-xl flex flex-col max-h-[600px] lg:max-h-none shrink-0">
+               <div class="bg-white/90 backdrop-blur-xl p-5 md:p-8 rounded-[2rem] border border-white shadow-xl flex flex-col shrink-0 mb-6">
                  <h3 class="font-extrabold text-xl md:text-2xl mb-4 md:mb-6 text-slate-800 shrink-0">Item Analysis (Raw Scans)</h3>
                  <div class="overflow-auto rounded-2xl border border-slate-100 w-full flex-1 overscroll-contain min-h-0">
                    <table class="w-full text-left text-xs md:text-sm whitespace-nowrap min-w-[600px]">
@@ -582,6 +576,20 @@
                <div class="text-5xl md:text-6xl mb-4">📭</div>
                <div class="text-lg md:text-xl font-bold text-center">No data available for this session.</div>
             </div>
+
+            <!-- Global Save Button Placed at Bottom of Analytics -->
+            <div class="mt-auto bg-white/90 backdrop-blur-xl p-6 rounded-[2rem] shadow-xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0 mb-2">
+                <div>
+                    <h3 class="font-extrabold text-slate-800 text-lg">Pending Changes</h3>
+                    <p class="text-slate-500 text-sm">Save your sections, students, quizzes, and analytics data to the cloud.</p>
+                </div>
+                <button @click="globalSave" :disabled="!hasPendingSaves || isGlobalSaving" :class="hasPendingSaves ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg hover:from-emerald-600 hover:to-emerald-700 animate-pulse' : 'bg-slate-100 text-slate-400 border border-slate-200'" class="px-8 py-4 rounded-xl font-bold transition-all text-lg flex items-center justify-center gap-3 w-full sm:w-auto shrink-0 min-h-[56px]">
+                    <span v-if="isGlobalSaving" class="w-6 h-6 border-4 border-current border-t-transparent rounded-full animate-spin"></span>
+                    <span v-else>💾</span> 
+                    {{ isGlobalSaving ? 'Saving Data...' : 'Save All Changes' }}
+                </button>
+            </div>
+
           </div>
           <!-- Powered by PVNJ Footer -->
           <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm pb-4">Powered by: PVNJ</div>
@@ -647,16 +655,21 @@
 
         // Save Queues for Explicit Saving
         const classQueue = ref([]);
-        const isSavingClasses = ref(false);
-
         const studentQueue = ref([]);
-        const isSavingStudents = ref(false);
-
         const quizQueue = ref([]);
-        const isSavingQuizzes = ref(false);
-
+        const deleteQueue = ref([]);
         const unsavedKeysMap = ref({});
-        const isSavingKey = ref(false);
+        const isGlobalSaving = ref(false);
+
+        // Global Pending Changes State
+        const hasPendingSaves = computed(() => {
+            return classQueue.value.length > 0 || 
+                   studentQueue.value.length > 0 || 
+                   quizQueue.value.length > 0 || 
+                   localScans.value.length > 0 || 
+                   deleteQueue.value.length > 0 ||
+                   Object.values(unsavedKeysMap.value).some(v => v === true);
+        });
 
         // UI States
         const newClassName = ref('');
@@ -782,6 +795,7 @@
            classQueue.value = [];
            studentQueue.value = [];
            quizQueue.value = [];
+           deleteQueue.value = [];
            unsavedKeysMap.value = {};
            
            areQuizzesLoaded.value = false; 
@@ -794,6 +808,7 @@
            localStorage.removeItem('ScanMaster_Queue_Students');
            localStorage.removeItem('ScanMaster_Queue_Quizzes');
            localStorage.removeItem('ScanMaster_Queue_Scans');
+           localStorage.removeItem('ScanMaster_Queue_Deletes');
            localStorage.removeItem('ScanMaster_Unsaved_Keys');
 
            if (syncInterval) {
@@ -819,11 +834,12 @@
             localStorage.setItem('ScanMaster_Queue_Students', JSON.stringify(studentQueue.value));
             localStorage.setItem('ScanMaster_Queue_Quizzes', JSON.stringify(quizQueue.value));
             localStorage.setItem('ScanMaster_Queue_Scans', JSON.stringify(localScans.value));
+            localStorage.setItem('ScanMaster_Queue_Deletes', JSON.stringify(deleteQueue.value));
             localStorage.setItem('ScanMaster_Unsaved_Keys', JSON.stringify(unsavedKeysMap.value));
         };
 
         watch([classes, students, quizzes, results], persistLocalData, { deep: true });
-        watch([classQueue, studentQueue, quizQueue, localScans, unsavedKeysMap], persistQueues, { deep: true });
+        watch([classQueue, studentQueue, quizQueue, localScans, deleteQueue, unsavedKeysMap], persistQueues, { deep: true });
 
         const migrateQuizData = (quizzesList) => {
             quizzesList.forEach(quiz => {
@@ -844,8 +860,7 @@
         const silentSync = async () => {
             if (isOffline.value || !isLoggedIn.value || isLoading.value) return;
             // Prevent silent pull if active local saves are pending to prevent overwriting local states
-            if (isSavingClasses.value || isSavingStudents.value || isSavingQuizzes.value || isSavingKey.value) return;
-            if (classQueue.value.length > 0 || studentQueue.value.length > 0 || quizQueue.value.length > 0) return;
+            if (isGlobalSaving.value || hasPendingSaves.value) return;
 
             try {
                 const data = await apiCall('getData');
@@ -889,6 +904,8 @@
              if (qQuizzes) quizQueue.value = JSON.parse(qQuizzes);
              const qScans = localStorage.getItem('ScanMaster_Queue_Scans');
              if (qScans) localScans.value = JSON.parse(qScans);
+             const qDels = localStorage.getItem('ScanMaster_Queue_Deletes');
+             if (qDels) deleteQueue.value = JSON.parse(qDels);
              const uKeys = localStorage.getItem('ScanMaster_Unsaved_Keys');
              if (uKeys) unsavedKeysMap.value = JSON.parse(uKeys);
           } catch(e) { console.warn("Cache parse error", e); }
@@ -912,19 +929,11 @@
             if (syncInterval) clearInterval(syncInterval);
             
             syncInterval = setInterval(async () => {
-              if (isOffline.value) return;
+              if (isOffline.value || isGlobalSaving.value) return;
 
-              if (localScans.value.length > 0) {
-                 const batch = [...localScans.value];
-                 const res = await apiCall('recordScans', { scans: batch });
-                 if (res && res.status === 'success') {
-                     localScans.value = localScans.value.slice(batch.length);
-                 }
+              if (hasPendingSaves.value) {
+                  await globalSave();
               }
-
-              if (classQueue.value.length > 0 && !isSavingClasses.value) saveClasses();
-              if (studentQueue.value.length > 0 && !isSavingStudents.value) saveStudents();
-              if (quizQueue.value.length > 0 && !isSavingQuizzes.value) saveQuizzes();
               
             }, 3000);
 
@@ -964,17 +973,61 @@
            isLoading.value = false;
         };
 
-        const forceSync = async () => {
+        const globalSave = async () => {
+            if (!hasPendingSaves.value) return;
             if (isOffline.value) {
-                alert("You are currently offline. Please reconnect to the internet to sync data.");
+                alert("You are currently offline. Changes will save automatically when connected.");
                 return;
             }
-            
-            // Force flush of all background queues first
-            if (classQueue.value.length > 0 && !isSavingClasses.value) await saveClasses();
-            if (studentQueue.value.length > 0 && !isSavingStudents.value) await saveStudents();
-            if (quizQueue.value.length > 0 && !isSavingQuizzes.value) await saveQuizzes();
-            
+            isGlobalSaving.value = true;
+
+            // 1. Save Classes
+            if (classQueue.value.length > 0) {
+                let successCount = 0;
+                for (let action of classQueue.value) {
+                    const res = await apiCall('modifyDB', action);
+                    if (res && res.status === 'success') successCount++;
+                    else break;
+                }
+                classQueue.value = classQueue.value.slice(successCount);
+            }
+
+            // 2. Save Students
+            if (studentQueue.value.length > 0) {
+                let successCount = 0;
+                for (let action of studentQueue.value) {
+                    const res = await apiCall('modifyDB', action);
+                    if (res && res.status === 'success') successCount++;
+                    else break;
+                }
+                studentQueue.value = studentQueue.value.slice(successCount);
+            }
+
+            // 3. Save Quizzes
+            if (quizQueue.value.length > 0) {
+                let successCount = 0;
+                for (let action of quizQueue.value) {
+                    const res = await apiCall('modifyDB', action);
+                    if (res && res.status === 'success') successCount++;
+                    else break;
+                }
+                quizQueue.value = quizQueue.value.slice(successCount);
+            }
+
+            // 4. Save Answer Keys
+            for (const [quizId, isUnsaved] of Object.entries(unsavedKeysMap.value)) {
+                if (isUnsaved) {
+                    const qData = quizzes.value.find(q => q.QuizID === quizId);
+                    if (qData) {
+                        const res = await apiCall('modifyDB', { subAction: 'updateQuiz', data: { id: quizId, name: qData.QuizName, questions: qData.Questions } });
+                        if (res && res.status === 'success') {
+                            unsavedKeysMap.value[quizId] = false;
+                        }
+                    }
+                }
+            }
+
+            // 5. Save Raw Scans
             if (localScans.value.length > 0) {
                const batch = [...localScans.value];
                const res = await apiCall('recordScans', { scans: batch });
@@ -982,6 +1035,30 @@
                    localScans.value = localScans.value.slice(batch.length);
                }
             }
+
+            // 6. Process Session Deletions
+            if (deleteQueue.value.length > 0) {
+                let successCount = 0;
+                const batch = [...deleteQueue.value];
+                for (let sid of batch) {
+                    const res = await apiCall('modifyDB', { subAction: 'deleteSession', data: { sessionId: sid } });
+                    if (res && res.status === 'success') successCount++;
+                    else break;
+                }
+                deleteQueue.value = deleteQueue.value.slice(successCount);
+            }
+
+            isGlobalSaving.value = false;
+        };
+
+        const forceSync = async () => {
+            if (isOffline.value) {
+                alert("You are currently offline. Please reconnect to the internet to sync data.");
+                return;
+            }
+            
+            // Force flush of all background queues first
+            if (hasPendingSaves.value) await globalSave();
             
             // Force refresh all arrays
             areQuizzesLoaded.value = false;
@@ -1020,6 +1097,7 @@
                 if (e.key === 'ScanMaster_Queue_Classes' && e.newValue) classQueue.value = JSON.parse(e.newValue);
                 if (e.key === 'ScanMaster_Queue_Students' && e.newValue) studentQueue.value = JSON.parse(e.newValue);
                 if (e.key === 'ScanMaster_Queue_Quizzes' && e.newValue) quizQueue.value = JSON.parse(e.newValue);
+                if (e.key === 'ScanMaster_Queue_Deletes' && e.newValue) deleteQueue.value = JSON.parse(e.newValue);
              } catch(err) { console.error("Cross-tab sync error", err); }
           });
 
@@ -1043,20 +1121,6 @@
           students.value = students.value.filter(s => s.ClassID !== id);
           if (selectedClass.value === id) selectedClass.value = '';
           classQueue.value.push({ subAction: 'deleteClass', data: { id } });
-        };
-
-        const saveClasses = async () => {
-          if(classQueue.value.length === 0) return;
-          isSavingClasses.value = true;
-          let successCount = 0;
-          for (let action of classQueue.value) {
-            const res = await apiCall('modifyDB', action);
-            if (res && res.status === 'success') successCount++;
-            else if (res && res.status === 'offline_queued') break;
-            else { alert("Error saving. Check internet connection."); break; }
-          }
-          classQueue.value = classQueue.value.slice(successCount);
-          isSavingClasses.value = false;
         };
 
         // --- STUDENTS ---
@@ -1099,20 +1163,6 @@
           studentQueue.value.push({ subAction: 'deleteStudent', data: { id } });
         };
 
-        const saveStudents = async () => {
-          if(studentQueue.value.length === 0) return;
-          isSavingStudents.value = true;
-          let successCount = 0;
-          for (let action of studentQueue.value) {
-            const res = await apiCall('modifyDB', action);
-            if (res && res.status === 'success') successCount++;
-            else if (res && res.status === 'offline_queued') break;
-            else { alert("Error saving. Check internet connection."); break; }
-          }
-          studentQueue.value = studentQueue.value.slice(successCount);
-          isSavingStudents.value = false;
-        };
-
         const printQRs = () => { window.print(); };
         const getClassName = (id) => classes.value.find(c => c.ClassID === id)?.ClassName || 'Unknown';
         const getQuizName = (id) => quizzes.value.find(q => q.QuizID === id)?.QuizName || 'Unknown';
@@ -1133,43 +1183,13 @@
           quizQueue.value.push({ subAction: 'deleteQuiz', data: { id } });
         };
 
-        const saveQuizzes = async () => {
-          if(quizQueue.value.length === 0) return;
-          isSavingQuizzes.value = true;
-          let successCount = 0;
-          for (let action of quizQueue.value) {
-            const res = await apiCall('modifyDB', action);
-            if (res && res.status === 'success') successCount++;
-            else if (res && res.status === 'offline_queued') break;
-            else { alert("Error saving. Check internet connection."); break; }
-          }
-          quizQueue.value = quizQueue.value.slice(successCount);
-          isSavingQuizzes.value = false;
-        };
-
         // --- ANSWER KEYS & QUIZ RENAMING ---
         const selectedQuizData = computed(() => quizzes.value.find(q => q.QuizID === selectedQuiz.value));
-        const hasUnsavedKey = computed(() => selectedQuizData.value && unsavedKeysMap.value[selectedQuizData.value.QuizID]);
 
         const markKeyUnsaved = () => {
           if(selectedQuizData.value) {
             unsavedKeysMap.value[selectedQuizData.value.QuizID] = true;
           }
-        };
-
-        const saveQuizKey = async () => {
-          if(!selectedQuizData.value) return;
-          isSavingKey.value = true;
-          const res = await apiCall('modifyDB', { 
-            subAction: 'updateQuiz', 
-            data: { id: selectedQuizData.value.QuizID, name: selectedQuizData.value.QuizName, questions: selectedQuizData.value.Questions } 
-          });
-          if (res && res.status === 'success') {
-             unsavedKeysMap.value[selectedQuizData.value.QuizID] = false;
-          } else if (res && res.status !== 'offline_queued') {
-             alert("Error saving answer key. Check internet connection.");
-          }
-          isSavingKey.value = false;
         };
 
         const addQuestion = () => {
@@ -1403,7 +1423,7 @@
         };
 
         const confirmExitSession = () => {
-           if (confirm("Are you sure you want to exit the quiz scanner? Ensure you've given it a moment to sync your final answers.")) {
+           if (confirm("Are you sure you want to exit the quiz scanner? Any final answers have been registered locally. Click the Global Save button later to sync.")) {
                endSession();
            }
         };
@@ -1501,7 +1521,7 @@
 
         const deleteCurrentSession = async () => {
             if (!analyticsSession.value) return;
-            if (!confirm("Are you sure you want to delete this session? All scan data for this session will be permanently removed.")) return;
+            if (!confirm("Are you sure you want to delete this session? Data will be marked for deletion and permanently removed upon the next Save.")) return;
             
             const sid = analyticsSession.value;
             // Remove locally instantly
@@ -1509,11 +1529,8 @@
             localScans.value = localScans.value.filter(r => r.SessionID !== sid);
             analyticsSession.value = '';
             
-            // Send deletion task to backend
-            const res = await apiCall('modifyDB', { subAction: 'deleteSession', data: { sessionId: sid } });
-            if (res && res.error) {
-               console.warn("Could not push deletion to cloud database. Changes remain local.", res.error);
-            }
+            // Queue deletion task for backend
+            deleteQueue.value.push(sid);
         };
 
         const analyticsStats = computed(() => {
@@ -1563,19 +1580,14 @@
 
         return {
           gasUrl, isLoggedIn, isOffline, authMode, authUser, authPass, authError, authenticate, toggleAuthMode, logout,
-          isLoading, activeTab, classes, students, quizzes, areQuizzesLoaded, forceSync,
+          isLoading, activeTab, classes, students, quizzes, areQuizzesLoaded, forceSync, globalSave, hasPendingSaves, isGlobalSaving,
           newClassName, selectedClass, addClass, deleteClass, currentStudents,
           newStudentName, bulkStudentText, addStudent, bulkAddStudents, deleteStudent, getClassName, printQRs,
-          newQuizName, selectedQuiz, addQuiz, deleteQuiz, selectedQuizData, addQuestion, removeQuestion, addChoice, removeChoice, getOptStyles,
+          newQuizName, selectedQuiz, addQuiz, deleteQuiz, selectedQuizData, addQuestion, removeQuestion, addChoice, removeChoice, getOptStyles, markKeyUnsaved,
           scanClass, scanQuiz, activeSessionId, qIndex, isCapturing, projectQuestion, startSession, restartTest, confirmExitSession, endSession, activeQuizData, activeQuestionKey, currentScanStudents, getStudentResult,
           video, canvas, openProjectionWindow,
           analyticsSession, uniqueSessions, getQuizName, analyticsStats, deleteCurrentSession,
-          cameraBlocked,
-          
-          classQueue, isSavingClasses, saveClasses,
-          studentQueue, isSavingStudents, saveStudents,
-          quizQueue, isSavingQuizzes, saveQuizzes,
-          hasUnsavedKey, isSavingKey, saveQuizKey, markKeyUnsaved
+          cameraBlocked
         };
       }
     }).mount('#app');
