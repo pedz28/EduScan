@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scanmaster-pwa-v7'; // Bumped version to force cache refresh and load new delete logic
+const CACHE_NAME = 'scanmaster-pwa-v8'; // Bumped version for new Remote Projector mode
 const ASSETS_TO_CACHE = [
   './',
   './index.html', 
