@@ -38,7 +38,7 @@
       
       .qr-card {
         width: 210mm;
-        height: 148.5mm; /* Exactly half of A4 portrait (297mm / 2) */
+        height: 148.5mm;
         page-break-inside: avoid;
         display: flex;
         flex-direction: column;
@@ -54,21 +54,19 @@
       .qr-wrapper { position: relative; width: 110mm; height: 110mm; margin-top: 10mm; }
       .qr-image { width: 100%; height: 100%; image-rendering: pixelated; object-fit: contain; }
       
-      /* Make the orientation letters large and bold for the camera */
       .letter { position: absolute; font-size: 32pt; font-weight: 900; font-family: ui-sans-serif, system-ui, sans-serif; color: #0f172a; }
       .letter-A { top: -15mm; left: 50%; transform: translateX(-50%); }
       .letter-B { right: -15mm; top: 50%; transform: translateY(-50%) rotate(90deg); }
       .letter-C { bottom: -15mm; left: 50%; transform: translateX(-50%) rotate(180deg); }
       .letter-D { left: -15mm; top: 50%; transform: translateY(-50%) rotate(-90deg); }
 
-      /* Styling for the student/section labels on the printed paper */
       .print-sec { position: absolute; top: 15mm; left: 15mm; font-size: 16pt; color: #64748b; font-weight: bold; font-family: monospace;}
       .print-info { position: absolute; bottom: 15mm; right: 15mm; text-align: right; font-family: ui-sans-serif, system-ui, sans-serif;}
       .print-info .num { font-size: 50pt; font-weight: 900; color: #0f172a; line-height: 1;}
       .print-info .name { font-size: 22pt; font-weight: 700; color: #334155; margin-top: 4px;}
     }
 
-    /* Custom Scrollbar for a polished look */
+    /* Custom Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
@@ -111,34 +109,28 @@
           </div>
        </div>
 
-       <!-- Powered by PVNJ Footer Note -->
        <div class="relative z-10 mt-6 text-center text-[9pt] italic text-blue-100/80 font-medium tracking-wide">
-          Powered by: PVNJ
+          Developed by: PVNJ
        </div>
     </div>
 
-    <!-- Lively Sidebar -->
-    <!-- UPDATED: Replaced overflow-hidden with overflow-y-auto so the ENTIRE sidebar can scroll in short views -->
-    <div v-if="isLoggedIn" class="w-72 bg-gradient-to-b from-slate-900 via-blue-900 to-blue-950 text-white shadow-2xl z-10 hidden md:block print:hidden relative overflow-y-auto overflow-x-hidden">
-      <!-- Added inner min-h-full flex wrapper to ensure bottom footer pushes down properly -->
+    <!-- Lively Sidebar (Hidden in projector mode) -->
+    <div v-if="isLoggedIn && activeTab !== 'projector'" class="w-72 bg-gradient-to-b from-slate-900 via-blue-900 to-blue-950 text-white shadow-2xl z-10 hidden md:block print:hidden relative overflow-y-auto overflow-x-hidden">
       <div class="flex flex-col min-h-full">
-        <!-- Decorative sidebar shapes -->
         <div class="absolute top-0 right-0 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl pointer-events-none -mt-10 -mr-10"></div>
         
-        <!-- Header -->
         <div :class="['p-8 font-extrabold text-3xl tracking-wider flex items-center gap-3 border-b border-blue-500/20 relative z-10 drop-shadow-md shrink-0', isOffline ? 'mt-10' : '']">
           📸 <span class="bg-clip-text text-transparent bg-gradient-to-r from-white to-cyan-200">ScanMaster</span>
         </div>
         
-        <!-- Navigation area without individual scrolling, allowing parent sidebar to scroll it -->
         <nav class="flex-1 py-6 space-y-2 relative z-10 shrink-0">
           <button @click="activeTab = 'classes'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'classes' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">👥 Sections & Students</button>
           <button @click="activeTab = 'quizzes'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'quizzes' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📝 Quizzes & Keys</button>
           <button @click="activeTab = 'scanner'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'scanner' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📷 Live Scanner</button>
+          <button @click="activeTab = 'projector'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'projector' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📺 Remote Projector</button>
           <button @click="activeTab = 'analytics'" :class="['w-full text-left px-8 py-4 font-bold transition-all rounded-r-3xl mr-4 border-l-4', activeTab === 'analytics' ? 'bg-white/10 text-white border-cyan-400 shadow-lg backdrop-blur-sm' : 'hover:bg-white/5 text-blue-200 hover:text-white border-transparent']">📊 Analytics</button>
         </nav>
         
-        <!-- Footer area with mt-auto to anchor to bottom when there's no overflow -->
         <div class="p-6 border-t border-blue-500/20 bg-black/20 relative z-10 backdrop-blur-md flex flex-col gap-3 shrink-0 mt-auto">
            <div class="text-sm font-bold text-white mb-2 flex items-center gap-2">
               <span class="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(52,211,153,1)]" :class="isOffline ? 'bg-amber-400 shadow-amber-400' : 'bg-emerald-400'"></span> 
@@ -155,7 +147,7 @@
     </div>
 
     <!-- Mobile Topbar -->
-    <div v-if="isLoggedIn" :class="['md:hidden fixed left-0 right-0 bg-gradient-to-r from-slate-900 to-blue-900 text-white p-3 sm:p-4 flex justify-between items-center z-20 print:hidden shadow-lg border-b border-blue-500/20 transition-all', isOffline ? 'top-10' : 'top-0']">
+    <div v-if="isLoggedIn && activeTab !== 'projector'" :class="['md:hidden fixed left-0 right-0 bg-gradient-to-r from-slate-900 to-blue-900 text-white p-3 sm:p-4 flex justify-between items-center z-20 print:hidden shadow-lg border-b border-blue-500/20 transition-all', isOffline ? 'top-10' : 'top-0']">
       <div class="font-extrabold text-lg sm:text-xl flex items-center gap-2 flex-1 min-w-0 pr-2">
         <span class="flex-shrink-0">📸</span>
         <span class="truncate">ScanMaster</span>
@@ -165,6 +157,7 @@
           <option value="classes" class="text-slate-800">Sections</option>
           <option value="quizzes" class="text-slate-800">Quizzes</option>
           <option value="scanner" class="text-slate-800">Scanner</option>
+          <option value="projector" class="text-slate-800">Projector</option>
           <option value="analytics" class="text-slate-800">Analytics</option>
         </select>
         <button @click="forceSync" :disabled="isLoading" class="text-lg sm:text-xl bg-blue-800/50 hover:bg-blue-700/50 transition min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-50 rounded-xl border border-blue-500/30 shadow-sm flex-shrink-0" title="Sync Data">
@@ -174,8 +167,65 @@
       </div>
     </div>
 
+    <!-- REMOTE PROJECTOR FULLSCREEN TAB -->
+    <div v-show="activeTab === 'projector'" class="flex flex-col h-auto min-h-full print:hidden bg-slate-900 absolute inset-0 z-40 overflow-y-auto text-white w-full">
+        <!-- Header / Navigation Bar for Projector (to exit it) -->
+        <div class="bg-slate-900/90 backdrop-blur-md p-4 md:p-6 flex justify-between items-center z-10 border-b border-slate-800/50 sticky top-0 shrink-0">
+            <h2 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 flex items-center gap-3">
+                <span class="text-3xl">📺</span> Remote Projector
+            </h2>
+            <button @click="activeTab = 'classes'" class="bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-slate-700 transition border border-slate-700">Exit Projector</button>
+        </div>
+
+        <!-- Waiting Screen -->
+        <div v-if="!projectorSession.sessionId" class="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-0">
+            <div class="w-32 h-32 bg-slate-800/50 rounded-full flex items-center justify-center text-6xl shadow-inner border border-slate-700/50 mb-6 animate-pulse">📡</div>
+            <h3 class="text-3xl md:text-4xl font-extrabold text-white mb-4">Awaiting Live Session</h3>
+            <p class="text-slate-400 text-lg md:text-xl max-w-lg mb-8">Launch a Live Scanner session on your phone using this exact same account. This screen will automatically connect and mirror the results.</p>
+        </div>
+
+        <!-- Live Projection View -->
+        <div v-else class="p-6 md:p-10 max-w-[1400px] mx-auto w-full flex-1">
+             <!-- Top Info Bar -->
+             <div class="flex flex-col md:flex-row justify-between md:items-center mb-10 gap-6 border-b border-slate-700/50 pb-8">
+               <h1 class="text-3xl md:text-5xl font-extrabold flex items-center gap-4 text-white drop-shadow-md">
+                 <span class="w-6 h-6 md:w-8 md:h-8 rounded-full bg-emerald-400 shadow-[0_0_20px_rgba(52,211,153,1)] animate-pulse"></span>
+                 Live Scan Results
+               </h1>
+               <div class="text-2xl md:text-3xl bg-slate-800/80 px-8 py-4 rounded-2xl font-black shadow-inner border border-slate-700 text-white flex-shrink-0">
+                 Item {{ projectorActiveQuestionLabel }} <span class="text-slate-500">/ {{ projectorTotalItems }}</span>
+               </div>
+             </div>
+
+             <!-- Question Presentation -->
+             <div v-if="projectorSession.projectQuestion && projectorActiveQuestion && (projectorActiveQuestion.qText || projectorActiveQuestion.options.some(o => o.text))" class="bg-gradient-to-br from-blue-700 via-blue-800 to-slate-900 p-8 md:p-12 rounded-[2.5rem] shadow-2xl mb-10 text-white border border-white/20 relative overflow-hidden transition-all duration-500">
+                <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-3xl pointer-events-none"></div>
+
+                <h2 class="text-3xl md:text-5xl font-extrabold mb-10 drop-shadow-lg leading-tight text-white">{{ projectorActiveQuestion.qText || 'Listen carefully to the teacher for the question context!' }}</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 text-xl md:text-2xl">
+                    <div v-for="(opt, oIdx) in projectorActiveQuestion.options" :key="oIdx" v-show="opt.text" class="bg-white/10 p-5 md:p-6 rounded-2xl backdrop-blur-md border border-white/20 shadow-xl flex items-center">
+                        <span class="inline-flex justify-center items-center min-w-[3rem] w-12 h-12 rounded-xl mr-5 shadow-sm font-black" :class="getOptStyles(oIdx).badge">{{ opt.label }}</span>
+                        <span class="font-bold break-words">{{ opt.text }}</span>
+                    </div>
+                </div>
+             </div>
+
+             <!-- Student Grid -->
+             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 content-start">
+                 <div v-for="s in projectorStudents" :key="s.StudentID"
+                      :class="['p-5 md:p-6 rounded-[2rem] border-2 flex justify-between items-center transition-all duration-300', getProjectorResultClass(s.StudentID)]">
+                     <span class="text-2xl md:text-3xl font-extrabold truncate pr-2 text-white">{{ s.RosterNumber }}. {{ s.StudentName.split(' ')[0] }}</span>
+                     <span v-if="getProjectorResultAnswer(s.StudentID)" class="bg-black/40 px-5 py-2 md:py-3 rounded-xl font-black text-2xl md:text-3xl border border-white/10 text-white shadow-inner">
+                        {{ getProjectorResultAnswer(s.StudentID) }}
+                     </span>
+                 </div>
+             </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
-    <div v-if="isLoggedIn" class="flex-1 overflow-hidden flex flex-col relative print:h-auto print:overflow-visible">
+    <div v-if="isLoggedIn && activeTab !== 'projector'" class="flex-1 overflow-hidden flex flex-col relative print:h-auto print:overflow-visible">
       
       <!-- Fullscreen Loading Overlay -->
       <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center bg-white/60 z-50 print:hidden backdrop-blur-md">
@@ -203,10 +253,8 @@
                 <input v-model="newClassName" @keyup.enter="addClass" type="text" placeholder="New Section Name" class="flex-1 w-full border-none shadow-inner bg-slate-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 transition font-medium text-slate-700">
                 <button @click="addClass" class="bg-gradient-to-br from-blue-600 to-cyan-500 text-white px-5 py-3 rounded-xl font-bold hover:shadow-lg transform hover:-translate-y-0.5 transition-all text-xl w-full md:w-auto shrink-0 min-h-[44px]">+</button>
               </div>
-              <!-- Added explicit overscroll-contain and overflow-y-auto for smooth vertical scrolling -->
               <ul class="space-y-3 flex-1 overflow-y-auto pr-2 overscroll-contain">
                 <li v-for="cls in classes" :key="cls.ClassID" @click="selectedClass = cls.ClassID" :class="['flex justify-between items-center p-4 rounded-2xl cursor-pointer border-2 transition-all font-bold gap-3', selectedClass === cls.ClassID ? 'bg-blue-50 border-blue-400 text-blue-900 shadow-md transform scale-[1.02]' : 'bg-white border-transparent hover:border-blue-200 text-slate-600 shadow-sm']">
-                  <!-- CHANGED: Replaced truncate with text wrapping and responsive text sizes -->
                   <span class="break-words whitespace-normal pr-2 text-sm md:text-base leading-snug flex-1">{{ cls.ClassName }}</span>
                   <button @click.stop="deleteClass(cls.ClassID)" class="text-rose-400 hover:text-white hover:bg-rose-500 w-8 h-8 rounded-full flex shrink-0 items-center justify-center transition-colors min-h-[32px] min-w-[32px]">&times;</button>
                 </li>
@@ -248,7 +296,6 @@
                  </div>
 
                  <div class="overflow-hidden bg-white rounded-2xl border border-slate-100 shadow-inner flex-1 flex flex-col min-h-0">
-                   <!-- Ensure overflow-y-auto is specified clearly for vertical text scrolling -->
                    <div class="overflow-y-auto overflow-x-auto flex-1 w-full overscroll-contain">
                      <table class="w-full text-left text-sm relative">
                        <thead class="bg-slate-100/80 sticky top-0 z-10 backdrop-blur-sm shadow-sm whitespace-nowrap">
@@ -261,7 +308,6 @@
                        <tbody>
                          <tr v-for="stu in currentStudents" :key="stu.StudentID" class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                            <td class="p-3 md:p-4 font-black text-blue-500 text-center text-lg">#{{ stu.RosterNumber }}</td>
-                           <!-- CHANGED: Allow student names to wrap and scale properly -->
                            <td class="p-3 md:p-4 font-bold text-slate-700 text-sm md:text-base break-words whitespace-normal">{{ stu.StudentName }}</td>
                            <td class="p-3 md:p-4 text-center">
                              <button @click="deleteStudent(stu.StudentID)" class="text-rose-400 hover:text-white hover:bg-rose-500 px-3 py-1 rounded-lg font-bold transition-colors min-h-[32px]">Del</button>
@@ -281,8 +327,8 @@
               </div>
             </div>
           </div>
-          <!-- Powered by PVNJ Footer -->
-          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Powered by: PVNJ</div>
+          <!-- Developed by PVNJ Footer -->
+          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Developed by: PVNJ</div>
         </div>
 
         <!-- QUIZZES TAB -->
@@ -302,7 +348,6 @@
               </div>
               <ul class="space-y-3 flex-1 overflow-y-auto pr-2 overscroll-contain">
                 <li v-for="q in quizzes" :key="q.QuizID" @click="selectedQuiz = q.QuizID" :class="['flex justify-between items-center p-4 rounded-2xl cursor-pointer border-2 transition-all font-bold gap-3', selectedQuiz === q.QuizID ? 'bg-blue-50 border-blue-400 text-blue-900 shadow-md transform scale-[1.02]' : 'bg-white border-transparent hover:border-blue-200 text-slate-600 shadow-sm']">
-                  <!-- CHANGED: Replaced truncate with text wrapping and responsive text sizes -->
                   <span class="break-words whitespace-normal pr-2 text-sm md:text-base leading-snug flex-1">{{ q.QuizName || 'Untitled Quiz' }}</span>
                   <button @click.stop="deleteQuiz(q.QuizID)" class="text-rose-400 hover:text-white hover:bg-rose-500 w-8 h-8 rounded-full flex shrink-0 items-center justify-center transition-colors min-w-[32px] min-h-[32px]">&times;</button>
                 </li>
@@ -313,7 +358,6 @@
             <div class="w-full lg:w-2/3 bg-white/90 backdrop-blur-xl p-5 md:p-6 rounded-[2rem] shadow-xl border border-white flex flex-col min-h-[500px] lg:h-full shrink-0 overflow-hidden">
               <div v-if="selectedQuizData" class="flex flex-col h-full min-h-0">
                 
-                <!-- Flexible Editable Quiz Header -->
                 <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4 border-b border-slate-200 pb-4 shrink-0">
                   <div class="flex-1 w-full group">
                     <label class="block text-xs font-black text-blue-500 uppercase tracking-wider mb-1">Quiz Title (Click to Edit)</label>
@@ -334,21 +378,17 @@
                   </div>
                 </div>
 
-                <!-- Question Editor Header -->
                 <div class="flex text-xs font-black text-slate-400 uppercase tracking-wider mb-3 px-2 shrink-0">
                     <div class="w-20 md:w-24 pl-2 text-center">Item #</div>
                     <div class="flex-1 px-2 md:px-4">Correct Answer</div>
                     <div class="w-16 md:w-20"></div>
                 </div>
 
-                <!-- Flexible Syntax Questions List with Expandable Editor -->
                 <div class="flex-1 overflow-y-auto space-y-4 pr-1 md:pr-2 pb-4 overscroll-contain min-h-0">
                   <div v-for="(q, idx) in selectedQuizData.Questions" :key="q.id" class="flex flex-col bg-white p-3 md:p-4 rounded-2xl border-2 border-slate-100 shadow-sm hover:border-blue-300 hover:shadow-md transition-all duration-300">
                     <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 md:gap-4">
-                      <!-- Flexible Syntax / Question Label -->
                       <input v-model="q.text" @input="markKeyUnsaved" class="w-16 md:w-24 font-black text-slate-700 border-none bg-slate-100 p-2 md:p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-center shadow-inner text-base md:text-lg min-h-[44px]" placeholder="1a">
                       
-                      <!-- Dynamic Choice Dropdown -->
                       <select v-model="q.answer" @change="markKeyUnsaved" class="flex-1 border-none shadow-inner p-2 md:p-3 rounded-xl font-black text-blue-700 bg-slate-100 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer text-base md:text-lg min-w-[100px] min-h-[44px]">
                         <option v-for="opt in q.options" :key="opt.label" :value="opt.label">Choice {{ opt.label }}</option>
                       </select>
@@ -357,7 +397,6 @@
                       <button @click="removeQuestion(idx)" class="text-rose-400 font-bold hover:text-white hover:bg-rose-500 w-11 h-11 rounded-xl flex items-center justify-center transition-colors text-xl shrink-0 min-h-[44px] min-w-[44px]" title="Remove Item">&times;</button>
                     </div>
 
-                    <!-- Expanded Content Editor (Dynamic Options Encoding) -->
                     <div v-if="q.showDetails" class="mt-4 pt-4 border-t-2 border-dashed border-slate-200 grid gap-3 animate-fade-in">
                        <textarea v-model="q.qText" @input="markKeyUnsaved" placeholder="Type the actual question here (Optional)..." class="w-full border-none bg-blue-50/50 shadow-inner p-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-400 text-sm font-medium text-slate-800 min-h-[44px]" rows="2"></textarea>
                        
@@ -367,7 +406,6 @@
                            <input v-model="opt.text" @input="markKeyUnsaved" :placeholder="'Choice ' + opt.label" class="flex-1 border-none bg-transparent outline-none text-slate-700 w-full min-w-0">
                            <button @click="removeChoice(q, oIdx)" class="text-slate-300 hover:text-rose-500 font-black px-2 text-xl min-h-[44px] min-w-[32px]" title="Delete Choice">&times;</button>
                          </div>
-                         <!-- Add Dynamic Choice Button -->
                          <button @click="addChoice(q)" class="flex items-center justify-center gap-2 bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 border-2 border-dashed border-slate-200 hover:border-blue-300 rounded-xl p-2 transition-all font-bold w-full h-full min-h-[44px]">
                            <span class="text-lg leading-none">+</span> Add Choice
                          </button>
@@ -383,8 +421,8 @@
               </div>
             </div>
           </div>
-          <!-- Powered by PVNJ Footer -->
-          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Powered by: PVNJ</div>
+          <!-- Developed by PVNJ Footer -->
+          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Developed by: PVNJ</div>
         </div>
 
         <!-- SCANNER TAB -->
@@ -397,7 +435,6 @@
               <h2 class="text-3xl font-extrabold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-800 to-cyan-600">Launch Scanner</h2>
               
               <div class="space-y-6">
-                <!-- Camera Warning -->
                 <div v-if="cameraBlocked" class="p-5 bg-rose-50 text-rose-900 border-2 border-rose-200 rounded-2xl shadow-sm mb-6">
                    <h3 class="font-bold text-lg text-rose-800 mb-2 flex items-center gap-2"><span>⚠️</span> Camera Denied</h3>
                    <p class="text-sm font-medium">Your browser blocked camera access. Please click the camera icon in your URL bar to allow access, then refresh the page.</p>
@@ -405,7 +442,6 @@
 
                 <div>
                   <label class="block text-sm font-black text-slate-500 uppercase tracking-wider mb-2 pl-1">Select Section</label>
-                  <!-- CHANGED: Made dropdowns break words so long section names are readable -->
                   <select v-model="scanClass" class="w-full border-none shadow-inner bg-slate-100 p-4 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-bold text-slate-700 text-sm md:text-base min-h-[56px] whitespace-normal break-words">
                     <option value="" disabled>-- Choose Section --</option>
                     <option v-for="c in classes" :value="c.ClassID">{{ c.ClassName }}</option>
@@ -438,11 +474,9 @@
                 </div>
                 
                 <div class="flex-1 relative bg-black flex items-center justify-center min-h-0">
-                   <!-- CHANGED: object-cover replaced with object-contain to prevent aggressive cropping in landscape/desktop modes -->
                    <video ref="video" class="absolute inset-0 w-full h-full object-contain opacity-0 z-0" playsinline muted></video>
                    <canvas ref="canvas" class="absolute inset-0 w-full h-full object-contain z-10"></canvas>
                    
-                   <!-- Scanner Targeting Frame overlay -->
                    <div v-if="isCapturing" class="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
                       <div class="w-48 h-48 md:w-64 md:h-64 border border-white/20 rounded-[2rem] relative shadow-[0_0_50px_rgba(56,189,248,0.2)]">
                          <div class="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-cyan-400 rounded-tl-2xl"></div>
@@ -452,7 +486,6 @@
                       </div>
                    </div>
 
-                   <!-- Overlay message when paused -->
                    <div v-if="!isCapturing" class="absolute inset-0 z-20 pointer-events-none flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
                       <div class="text-white font-bold text-xl md:text-2xl flex flex-col items-center gap-4 bg-slate-800/80 p-6 md:p-8 rounded-3xl border border-slate-700 shadow-2xl">
                          <span class="text-4xl md:text-5xl">⏸</span>
@@ -461,7 +494,6 @@
                    </div>
                 </div>
 
-                <!-- Enhanced Capture & Control Buttons -->
                 <div class="bg-slate-900/90 backdrop-blur-md p-4 md:p-5 z-10 text-center border-t border-slate-800/50 flex flex-wrap justify-center gap-2 md:gap-3 relative shrink-0">
                    <button @click="isCapturing = !isCapturing" :class="isCapturing ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 hover:from-amber-500 hover:to-orange-600' : 'bg-gradient-to-r from-emerald-400 to-green-500 text-white hover:from-emerald-500 hover:to-green-600'" class="px-4 md:px-6 py-3 md:py-4 rounded-xl font-extrabold transition-all shadow-lg flex-1 md:flex-none flex justify-center items-center gap-2 transform hover:-translate-y-1 min-h-[44px]">
                       <span v-if="!isCapturing" class="text-sm md:text-lg">▶️ Start Capturing</span>
@@ -487,23 +519,19 @@
                      </button>
                   </span>
                   
-                  <!-- Toggle to show/hide the encoded question content -->
                   <label class="flex items-center gap-2 text-xs font-bold cursor-pointer bg-slate-100 px-3 md:px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-200 transition border border-slate-200 shadow-inner min-h-[44px]">
                      <input type="checkbox" v-model="projectQuestion" class="w-4 h-4 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500">
                      Show Question
                   </label>
                 </div>
 
-                <!-- In-App Colorful Question Preview with dynamic options -->
                 <div v-if="projectQuestion && activeQuizData.Questions[qIndex] && (activeQuizData.Questions[qIndex].qText || activeQuizData.Questions[qIndex].options.some(o => o.text))" class="p-5 md:p-6 bg-gradient-to-br from-blue-700 via-blue-800 to-slate-900 text-white flex-shrink-0 shadow-inner border-b border-white/20 relative overflow-hidden flex flex-col max-h-[50%]">
-                   <!-- Decorative elements -->
                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none -mt-10 -mr-10"></div>
                    
                    <p class="font-extrabold text-lg md:text-xl mb-4 drop-shadow-md leading-tight overflow-y-auto shrink-0 max-h-[30%] overscroll-contain">{{ activeQuizData.Questions[qIndex].qText || 'Context not provided.' }}</p>
                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs md:text-sm font-medium overflow-y-auto overscroll-contain pb-2">
                       <div v-for="(opt, oIdx) in activeQuizData.Questions[qIndex].options" :key="oIdx" v-show="opt.text" class="bg-white/10 backdrop-blur-md p-2.5 rounded-xl border border-white/20 shadow-sm flex items-center overflow-hidden shrink-0">
                         <span class="w-6 h-6 rounded font-black flex items-center justify-center mr-3 shrink-0" :class="getOptStyles(oIdx).badge">{{ opt.label }}</span>
-                        <!-- CHANGED: Allow preview options text to wrap -->
                         <span class="break-words whitespace-normal text-xs sm:text-sm">{{ opt.text }}</span>
                       </div>
                    </div>
@@ -517,7 +545,6 @@
                           getStudentResult(s.StudentID).isCorrect ? 'bg-emerald-100 border-emerald-400 text-emerald-900 shadow-md transform scale-105' :
                           'bg-rose-100 border-rose-400 text-rose-900 shadow-md transform scale-105'
                         ]">
-                     <!-- CHANGED: Text wrap so student names are visible and fit perfectly -->
                      <span class="break-words whitespace-normal pr-2 text-xs sm:text-sm leading-tight flex-1">{{ s.RosterNumber }}. {{ s.StudentName.split(' ')[0] }}</span>
                      <span v-if="getStudentResult(s.StudentID)" class="bg-white px-2 md:px-3 py-1 rounded-lg border shadow-sm text-sm md:text-base shrink-0">{{ getStudentResult(s.StudentID).answer }}</span>
                    </div>
@@ -525,8 +552,8 @@
               </div>
             </div>
           </div>
-          <!-- Powered by PVNJ Footer -->
-          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Powered by: PVNJ</div>
+          <!-- Developed by PVNJ Footer -->
+          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Developed by: PVNJ</div>
         </div>
 
         <!-- ANALYTICS TAB -->
@@ -539,7 +566,6 @@
                   <span class="text-lg">🗑️</span> Delete Session Data
                 </button>
               </div>
-              <!-- CHANGED: Select dropdowns text wraps correctly -->
               <select v-model="analyticsSession" class="w-full md:w-1/2 border-none shadow-inner bg-slate-100 p-3 md:p-4 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-bold text-slate-700 text-sm md:text-base min-h-[44px] whitespace-normal break-words">
                  <option value="">-- Select a Completed Session --</option>
                  <option v-for="sess in uniqueSessions" :key="sess.SessionID" :value="sess.SessionID">{{ sess.DateStr }} - {{ getClassName(sess.ClassID) }} - {{ getQuizName(sess.QuizID) }}</option>
@@ -566,7 +592,7 @@
                  </div>
                </div>
 
-               <!-- Item Analysis Table (Dynamically Spanned options) -->
+               <!-- Item Analysis Table -->
                <div class="bg-white/90 backdrop-blur-xl p-5 md:p-8 rounded-[2rem] border border-white shadow-xl flex flex-col max-h-[600px] lg:max-h-none shrink-0">
                  <h3 class="font-extrabold text-xl md:text-2xl mb-4 md:mb-6 text-slate-800 shrink-0">Item Analysis (Raw Scans)</h3>
                  <div class="overflow-y-auto overflow-x-auto rounded-2xl border border-slate-100 w-full flex-1 overscroll-contain min-h-0">
@@ -576,7 +602,6 @@
                           <th class="p-4 md:p-5 w-20 md:w-24 font-black text-slate-400 uppercase tracking-wider">Item</th>
                           <th class="p-4 md:p-5 w-16 md:w-20 font-black text-slate-400 uppercase tracking-wider text-center">Key</th>
                           <th class="p-4 md:p-5 font-black text-slate-400 uppercase tracking-wider">Correct %</th>
-                          <!-- Dynamic Analysis Column Headers based on Max Choices -->
                           <th v-for="(lbl, i) in analyticsStats.analysisHeaders" :key="lbl" class="p-4 md:p-5 text-center font-black uppercase tracking-wider" :class="getOptStyles(i).text + ' ' + getOptStyles(i).bg">
                              {{ lbl }} (n)
                           </th>
@@ -594,7 +619,6 @@
                              <span class="text-sm md:text-base" :class="item.diff >= 70 ? 'text-emerald-600' : item.diff >= 40 ? 'text-amber-600' : 'text-rose-600'">{{ item.diff }}%</span>
                            </div>
                          </td>
-                         <!-- Dynamic Count Values -->
                          <td v-for="(lbl, colIdx) in analyticsStats.analysisHeaders" :key="lbl" class="p-4 md:p-5 text-center font-black text-base md:text-lg" :class="getOptStyles(colIdx).text">
                            <span class="px-3 py-1 rounded-lg bg-opacity-40" :class="getOptStyles(colIdx).bg.replace('100', '50')">{{ item.counts[lbl] || 0 }}</span>
                          </td>
@@ -609,8 +633,8 @@
                <div class="text-lg md:text-xl font-bold text-center">No data available for this session.</div>
             </div>
           </div>
-          <!-- Powered by PVNJ Footer -->
-          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Powered by: PVNJ</div>
+          <!-- Developed by PVNJ Footer -->
+          <div class="text-center text-[9pt] italic text-slate-500 mt-4 shrink-0 font-medium drop-shadow-sm">Developed by: PVNJ</div>
         </div>
         
       </div> <!-- End Scrollable Content -->
@@ -665,7 +689,7 @@
         const quizzes = ref([]);
         const results = ref([]); // historical scans
         const localScans = ref([]); // un-synced queue
-        let syncInterval = null; // Used to prevent duplicate background loops on multiple logins
+        let syncInterval = null; 
         
         // Lazy loading tracking for Quizzes
         const areQuizzesLoaded = ref(false);
@@ -680,7 +704,7 @@
         const quizQueue = ref([]);
         const isSavingQuizzes = ref(false);
 
-        const sessionQueue = ref([]); // Queue for deletion of analytics sessions
+        const sessionQueue = ref([]); 
         const isSavingSessions = ref(false);
 
         const unsavedKeysMap = ref({});
@@ -705,9 +729,12 @@
         let stream = null;
         let scanRaf = null;
         const lastScanMap = {};
-        const isCapturing = ref(false); // Controls if the scanner processes QR frames
-        const liveSessionResults = ref([]); // reactive UI updates for current session
-        const projectQuestion = ref(true); // Controls if the question is projected
+        const isCapturing = ref(false); 
+        const liveSessionResults = ref([]); 
+        const projectQuestion = ref(true); 
+
+        // REMOTE PROJECTOR STATE
+        const projectorSession = ref({ sessionId: '', classId: '', quizId: '', qIndex: 0, projectQuestion: true });
 
         // API Helper for Fetching
         const apiCall = async (action, payload = null) => {
@@ -748,7 +775,6 @@
 
           } catch(e) {
             console.error('API Error:', e);
-            // Catch network fetch failures indicating offline status mid-flight
             isOffline.value = !navigator.onLine;
             if (isOffline.value) return { status: 'offline_queued' };
             return { error: "Network Error: Could not connect to Google Server.\nDetails: " + e.message };
@@ -786,7 +812,7 @@
               isLoggedIn.value = true;
               localStorage.setItem('ScanMaster_User', authUser.value);
               localStorage.setItem('ScanMaster_Pass', authPass.value);
-              loadDatabase(); // Pull data for just this user
+              loadDatabase(); 
            } else {
               authError.value = res?.error || "Authentication failed.";
               isLoading.value = false;
@@ -816,7 +842,6 @@
            
            areQuizzesLoaded.value = false; 
 
-           // Clear local caches upon logout for security
            localStorage.removeItem('ScanMaster_Cache_Classes');
            localStorage.removeItem('ScanMaster_Cache_Students');
            localStorage.removeItem('ScanMaster_Cache_Quizzes');
@@ -842,7 +867,6 @@
            await loadDatabase();
         };
 
-        // Deep Watchers for Offline Persistence
         const persistLocalData = () => {
             if (!isLoggedIn.value) return;
             localStorage.setItem('ScanMaster_Cache_Classes', JSON.stringify(classes.value));
@@ -863,7 +887,6 @@
         watch([classes, students, quizzes, results], persistLocalData, { deep: true });
         watch([classQueue, studentQueue, quizQueue, sessionQueue, localScans, unsavedKeysMap], persistQueues, { deep: true });
 
-        // Automatic DB Data Format Upgrader for Quizzes
         const migrateQuizData = (quizzesList) => {
             quizzesList.forEach(quiz => {
                 quiz.Questions.forEach(q => {
@@ -884,7 +907,6 @@
           if (!isLoggedIn.value) return;
           isLoading.value = true;
           
-          // 1. Immediately Load from Local Cache (Offline First behavior)
           try {
              const cClasses = localStorage.getItem('ScanMaster_Cache_Classes');
              if (cClasses) classes.value = JSON.parse(cClasses);
@@ -895,7 +917,6 @@
              const cResults = localStorage.getItem('ScanMaster_Cache_Results');
              if (cResults) results.value = JSON.parse(cResults);
              
-             // Restore Queues
              const qClasses = localStorage.getItem('ScanMaster_Queue_Classes');
              if (qClasses) classQueue.value = JSON.parse(qClasses);
              const qStudents = localStorage.getItem('ScanMaster_Queue_Students');
@@ -911,12 +932,11 @@
           } catch(e) { console.warn("Cache parse error", e); }
 
           if (isOffline.value) {
-              if (['quizzes', 'scanner', 'analytics'].includes(activeTab.value)) loadQuizzes();
+              if (['quizzes', 'scanner', 'analytics', 'projector'].includes(activeTab.value)) loadQuizzes();
               isLoading.value = false;
               return;
           }
 
-          // 2. Fetch fresh data from DB if Online
           try {
             const data = await apiCall('getData');
             
@@ -925,16 +945,15 @@
             
             classes.value = data.classes || [];
             students.value = data.students || [];
-            // Preserve the unsynced local results so they aren't hidden before syncing
             results.value = [...(data.results || []), ...localScans.value];
             
             if (syncInterval) clearInterval(syncInterval);
             
-            // Start robust background sync loop
+            // BACKGROUND SYNC LOOP
             syncInterval = setInterval(async () => {
               if (isOffline.value) return;
 
-              // Sync Scans
+              // 1. Sync local scans queue
               if (localScans.value.length > 0) {
                  const batch = [...localScans.value];
                  const res = await apiCall('recordScans', { scans: batch });
@@ -943,12 +962,40 @@
                  }
               }
 
-              // Auto-sync other queues continuously
+              // 2. Auto-sync other queues continuously
               if (classQueue.value.length > 0 && !isSavingClasses.value) saveClasses();
               if (studentQueue.value.length > 0 && !isSavingStudents.value) saveStudents();
               if (quizQueue.value.length > 0 && !isSavingQuizzes.value) saveQuizzes();
               if (sessionQueue.value.length > 0 && !isSavingSessions.value) saveSessions();
               
+              // 3. PROJECTOR SYNCING
+              if (activeTab.value === 'projector') {
+                  const res = await apiCall('pollProjector');
+                  if (res && res.activeSession) {
+                      projectorSession.value = res.activeSession;
+                      if (res.sessionResults) {
+                          // Merge specific session results into our global results array for projector
+                          const otherResults = results.value.filter(r => 
+                              r.SessionID !== projectorSession.value.sessionId && 
+                              r.sessionId !== projectorSession.value.sessionId
+                          );
+                          results.value = [...otherResults, ...res.sessionResults];
+                      }
+                  } else if (res && res.status !== 'offline_queued') {
+                      projectorSession.value = { sessionId: '', classId: '', quizId: '', qIndex: 0, projectQuestion: true };
+                  }
+              } 
+              // 4. SCANNER HEARTBEAT
+              else if (activeSessionId.value) {
+                  apiCall('updateActiveSession', {
+                      sessionId: activeSessionId.value,
+                      classId: scanClass.value,
+                      quizId: scanQuiz.value,
+                      qIndex: qIndex.value,
+                      projectQuestion: projectQuestion.value
+                  });
+              }
+
             }, 3000);
 
           } catch(e) {
@@ -958,7 +1005,7 @@
           }
           isLoading.value = false;
           
-          if (['quizzes', 'scanner', 'analytics'].includes(activeTab.value)) {
+          if (['quizzes', 'scanner', 'analytics', 'projector'].includes(activeTab.value)) {
              loadQuizzes();
           }
         };
@@ -985,7 +1032,7 @@
         };
 
         watch(activeTab, (newTab) => {
-           if (['quizzes', 'scanner', 'analytics'].includes(newTab)) {
+           if (['quizzes', 'scanner', 'analytics', 'projector'].includes(newTab)) {
               loadQuizzes();
            }
         });
@@ -1203,7 +1250,7 @@
           return styles[idx % styles.length];
         };
 
-        // --- EXTERNAL PROJECTION WINDOW ---
+        // --- EXTERNAL PROJECTION WINDOW (Legacy Fallback) ---
         const projectionWindow = ref(null);
 
         const openProjectionWindow = () => {
@@ -1313,7 +1360,18 @@
            root.innerHTML = html;
         };
 
-        // --- SCANNER BEHAVIOR (Continued) ---
+        // --- SCANNER STATE SYNC ---
+        const syncScannerStateNow = () => {
+            if (!activeSessionId.value) return;
+            apiCall('updateActiveSession', {
+                sessionId: activeSessionId.value,
+                classId: scanClass.value,
+                quizId: scanQuiz.value,
+                qIndex: qIndex.value,
+                projectQuestion: projectQuestion.value
+            });
+        };
+
         const activeQuizData = computed(() => quizzes.value.find(q => q.QuizID === scanQuiz.value));
         const activeQuestionKey = computed(() => activeQuizData.value?.Questions[qIndex.value]?.answer);
         const currentScanStudents = computed(() => students.value.filter(s => s.ClassID === scanClass.value).sort((a,b)=>a.RosterNumber - b.RosterNumber));
@@ -1321,6 +1379,10 @@
         watch([liveSessionResults, qIndex, isCapturing, currentScanStudents, projectQuestion], () => {
            renderProjection();
         }, { deep: true });
+
+        watch([qIndex, projectQuestion], () => {
+           if (activeSessionId.value) syncScannerStateNow();
+        });
 
         const getStudentResult = (studentId) => {
           const res = liveSessionResults.value.find(r => r.studentId === studentId && r.qNum === (qIndex.value+1));
@@ -1354,7 +1416,9 @@
              video.value.setAttribute("playsinline", true);
              await video.value.play();
              scanRaf = requestAnimationFrame(tick);
-
+             
+             syncScannerStateNow(); // Announce new session to projector clients
+             
            } catch(e) { 
              console.error("Camera Setup Failed:", e);
              if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
@@ -1379,7 +1443,7 @@
            }
         };
 
-        const endSession = () => {
+        const endSession = async () => {
            if(stream) stream.getTracks().forEach(t => t.stop());
            cancelAnimationFrame(scanRaf);
            activeSessionId.value = '';
@@ -1389,6 +1453,8 @@
                projectionWindow.value.close();
                projectionWindow.value = null;
            }
+
+           apiCall('updateActiveSession', { sessionId: '' }); // Clear session for projector
         };
 
         const tick = () => {
@@ -1432,14 +1498,15 @@
                             const isCorrect = (ans === activeQuestionKey.value);
                             
                             const payload = {
-                               sessionId: activeSessionId.value, classId: scanClass.value, quizId: scanQuiz.value,
-                               studentId: studentId, qNum: qIndex.value + 1, answer: ans, isCorrect: isCorrect, Timestamp: new Date().toISOString()
+                               SessionID: activeSessionId.value, ClassID: scanClass.value, QuizID: scanQuiz.value,
+                               StudentID: studentId, QuestionNum: qIndex.value + 1, Answer: ans, IsCorrect: isCorrect, Timestamp: new Date().toISOString()
                             };
 
+                            // Update locally specific to scanner view
                             liveSessionResults.value = liveSessionResults.value.filter(r => !(r.studentId === studentId && r.qNum === (qIndex.value+1)));
-                            liveSessionResults.value.push(payload);
+                            liveSessionResults.value.push({ studentId: studentId, qNum: qIndex.value+1, answer: ans, isCorrect: isCorrect });
                             
-                            // Push directly into results.value so it works in analytics instantly even if offline
+                            // Push globally so it syncs up to cloud in the interval
                             results.value.push(payload);
                             localScans.value.push(payload);
                             lastScanMap[studentId] = now;
@@ -1452,13 +1519,43 @@
            if (activeSessionId.value) scanRaf = requestAnimationFrame(tick);
         };
 
+        // --- REMOTE PROJECTOR GETTERS ---
+        const projectorQuizData = computed(() => quizzes.value.find(q => q.QuizID === projectorSession.value.quizId));
+        const projectorActiveQuestion = computed(() => projectorQuizData.value?.Questions[projectorSession.value.qIndex]);
+        const projectorActiveQuestionLabel = computed(() => projectorActiveQuestion.value?.text || (projectorSession.value.qIndex + 1));
+        const projectorTotalItems = computed(() => projectorQuizData.value?.Questions.length || 0);
+        const projectorStudents = computed(() => students.value.filter(s => s.ClassID === projectorSession.value.classId).sort((a,b)=>a.RosterNumber - b.RosterNumber));
+
+        const getProjectorResult = (studentId) => {
+            return results.value.find(r => 
+               (r.SessionID === projectorSession.value.sessionId || r.sessionId === projectorSession.value.sessionId) &&
+               (r.StudentID === studentId || r.studentId === studentId) && 
+               (r.QuestionNum === (projectorSession.value.qIndex + 1) || r.qNum === (projectorSession.value.qIndex + 1))
+            );
+        };
+
+        const getProjectorResultClass = (studentId) => {
+            const res = getProjectorResult(studentId);
+            if (!res) return "bg-slate-800/80 border-slate-700 text-slate-500";
+            const isCorrect = res.IsCorrect !== undefined ? res.IsCorrect : res.isCorrect;
+            if (isCorrect) return "bg-emerald-900/80 border-emerald-500 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.4)]";
+            return "bg-rose-900/80 border-rose-500 text-rose-100 shadow-[0_0_20px_rgba(244,63,94,0.4)]";
+        };
+
+        const getProjectorResultAnswer = (studentId) => {
+            const res = getProjectorResult(studentId);
+            return res ? (res.Answer || res.answer) : '';
+        };
+
         // --- ANALYTICS ---
         const analyticsSession = ref('');
         const uniqueSessions = computed(() => {
            const map = {};
            results.value.forEach(r => {
-             if(!map[r.SessionID]) {
-                 map[r.SessionID] = { SessionID: r.SessionID, ClassID: r.ClassID, QuizID: r.QuizID, DateStr: new Date(r.Timestamp).toLocaleDateString() };
+             // Fallbacks for arrays bridging the gap between camelCase un-synced queue and PascalCase API records
+             const sId = r.SessionID || r.sessionId;
+             if(sId && !map[sId]) {
+                 map[sId] = { SessionID: sId, ClassID: r.ClassID || r.classId, QuizID: r.QuizID || r.quizId, DateStr: new Date(r.Timestamp).toLocaleDateString() };
              }
            });
            return Object.values(map).sort((a,b) => new Date(b.DateStr) - new Date(a.DateStr));
@@ -1466,7 +1563,7 @@
 
         const analyticsStats = computed(() => {
            if(!analyticsSession.value) return null;
-           const sResults = results.value.filter(r => r.SessionID === analyticsSession.value);
+           const sResults = results.value.filter(r => (r.SessionID || r.sessionId) === analyticsSession.value);
            if(sResults.length === 0) return null;
            
            const sessMeta = uniqueSessions.value.find(s => s.SessionID === analyticsSession.value);
@@ -1475,8 +1572,10 @@
 
            const studentScores = {};
            sResults.forEach(r => {
-             if(!studentScores[r.StudentID]) studentScores[r.StudentID] = 0;
-             if(r.IsCorrect) studentScores[r.StudentID]++;
+             const studentId = r.StudentID || r.studentId;
+             const isCorrect = r.IsCorrect !== undefined ? r.IsCorrect : r.isCorrect;
+             if(!studentScores[studentId]) studentScores[studentId] = 0;
+             if(isCorrect) studentScores[studentId]++;
            });
            
            const scoresArr = Object.values(studentScores);
@@ -1488,18 +1587,18 @@
 
            const itemAnalysis = quizMeta.Questions.map((q, i) => {
               const qNum = i + 1;
-              const qAns = sResults.filter(r => r.QuestionNum === qNum);
+              const qAns = sResults.filter(r => (r.QuestionNum || r.qNum) === qNum);
               const total = Math.max(qAns.length, 1);
               
               const counts = {};
               analysisHeaders.forEach(lbl => {
-                  counts[lbl] = qAns.filter(r => r.Answer === lbl).length;
+                  counts[lbl] = qAns.filter(r => (r.Answer || r.answer) === lbl).length;
               });
 
               return {
                  label: q.text || (i + 1).toString(),
                  key: q.answer,
-                 diff: Math.round((qAns.filter(r=>r.IsCorrect).length / total) * 100),
+                 diff: Math.round((qAns.filter(r => r.IsCorrect !== undefined ? r.IsCorrect : r.isCorrect).length / total) * 100),
                  counts: counts
               };
            });
@@ -1507,17 +1606,14 @@
            return { mean: mean.toFixed(2), sd: Math.sqrt(variance).toFixed(2), scores: scoresArr, itemAnalysis, analysisHeaders };
         });
 
-        // Add Delete Session function
         const deleteSession = () => {
             if(!analyticsSession.value) return;
             if(!confirm("Are you sure you want to completely delete this session and all its scan results? This cannot be undone.")) return;
 
             const idToDelete = analyticsSession.value;
-            // Optimistically update UI
-            results.value = results.value.filter(r => r.SessionID !== idToDelete);
+            results.value = results.value.filter(r => r.SessionID !== idToDelete && r.sessionId !== idToDelete);
             analyticsSession.value = '';
 
-            // Add to background sync queue
             sessionQueue.value.push({ subAction: 'deleteSession', data: { id: idToDelete } });
         };
 
@@ -1543,6 +1639,7 @@
           newQuizName, selectedQuiz, addQuiz, deleteQuiz, selectedQuizData, addQuestion, removeQuestion, addChoice, removeChoice, getOptStyles,
           scanClass, scanQuiz, activeSessionId, qIndex, isCapturing, projectQuestion, startSession, restartTest, confirmExitSession, endSession, activeQuizData, activeQuestionKey, currentScanStudents, getStudentResult,
           video, canvas, openProjectionWindow,
+          projectorSession, projectorActiveQuestion, projectorActiveQuestionLabel, projectorTotalItems, projectorStudents, getProjectorResultClass, getProjectorResultAnswer,
           analyticsSession, uniqueSessions, getQuizName, analyticsStats, deleteSession,
           cameraBlocked,
           
@@ -1556,7 +1653,6 @@
   </script>
   
   <script>
-    // PWA Service Worker Registration
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').then(() => {
